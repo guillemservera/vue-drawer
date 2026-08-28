@@ -9,7 +9,7 @@ import { ref } from 'vue'
 		DrawerRootNested,
 		DrawerTitle,
 		DrawerTrigger,
-	} from 'vuedrawer'
+	} from '@guillemservera/vue-drawer'
 
 const open = ref(false)
 const nestedOpen = ref(false)

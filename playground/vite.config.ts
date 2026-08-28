@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      vuedrawer: fileURLToPath(new URL('../src/index.ts', import.meta.url)),
+      '@guillemservera/vue-drawer': fileURLToPath(new URL('../src/index.ts', import.meta.url)),
     },
   },
 })

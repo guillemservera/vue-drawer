@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { DrawerAnimation, DrawerDirection, DrawerRootProps, DrawerSnapPoint } from 'vuedrawer'
+import type { DrawerAnimation, DrawerDirection, DrawerRootProps, DrawerSnapPoint } from '@guillemservera/vue-drawer'
 import {
 	DrawerContent,
 	DrawerDescription,
@@ -10,7 +10,7 @@ import {
 	DrawerRoot,
 	DrawerRootNested,
 	DrawerTitle,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 import { contentClass, fadeTimingStyle, handleClass, overlayClass } from './demoClasses'
 
 const props = defineProps<{ styled: boolean }>()

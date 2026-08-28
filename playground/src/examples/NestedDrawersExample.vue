@@ -10,7 +10,7 @@ import {
 	DrawerRoot,
 	DrawerRootNested,
 	DrawerTitle,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
 
 const props = defineProps<{ styled: boolean }>()

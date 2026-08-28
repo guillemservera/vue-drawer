@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { DrawerAnimation } from 'vuedrawer'
-	import {
-		DrawerClose,
-		DrawerContent,
-		DrawerDescription,
-		DrawerHandle,
+import type { DrawerAnimation } from '@guillemservera/vue-drawer'
+import {
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-		DrawerRoot,
-		DrawerTitle,
-		DrawerTrigger,
-	} from 'vuedrawer'
+	DrawerRoot,
+	DrawerTitle,
+	DrawerTrigger,
+} from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
 
 const props = defineProps<{ styled: boolean }>()

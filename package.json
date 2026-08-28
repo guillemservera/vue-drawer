@@ -1,5 +1,5 @@
 {
-  "name": "vuedrawer",
+  "name": "@guillemservera/vue-drawer",
   "version": "0.1.0",
   "description": "A headless, unstyled and behaviorally opinionated drawer primitive for Vue 3 with gestures, snap points, nested drawers and zero runtime dependencies.",
   "type": "module",
@@ -8,12 +8,12 @@
   "author": "Guillem Servera",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/guillemservera/vuedrawer.git"
+    "url": "git+https://github.com/guillemservera/vue-drawer.git"
   },
   "bugs": {
-    "url": "https://github.com/guillemservera/vuedrawer/issues"
+    "url": "https://github.com/guillemservera/vue-drawer/issues"
   },
-  "homepage": "https://github.com/guillemservera/vuedrawer#readme",
+  "homepage": "https://github.com/guillemservera/vue-drawer#readme",
   "sideEffects": [
     "**/*.css"
   ],
@@ -67,7 +67,7 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:playground": "pnpm --filter @vuedrawer/playground dev",
+    "dev:playground": "pnpm --filter @vue-drawer/playground dev",
     "build": "vue-tsc --noEmit -p tsconfig.build.json && vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",

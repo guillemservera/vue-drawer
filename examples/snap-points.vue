@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { DrawerSnapPoint } from 'vuedrawer'
-import { DrawerClose, DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal, DrawerRoot, DrawerTitle, DrawerTrigger } from 'vuedrawer'
+import type { DrawerSnapPoint } from '@guillemservera/vue-drawer'
+import { DrawerClose, DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal, DrawerRoot, DrawerTitle, DrawerTrigger } from '@guillemservera/vue-drawer'
 
 const open = ref(false)
 const activeSnapPoint = ref<DrawerSnapPoint | null>('160px')

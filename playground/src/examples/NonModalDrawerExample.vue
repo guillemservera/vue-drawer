@@ -7,7 +7,7 @@ import {
 	DrawerPortal,
 	DrawerRoot,
 	DrawerTitle,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 import { contentClass, handleClass } from './demoClasses'
 
 const props = defineProps<{ styled: boolean }>()

@@ -10,7 +10,7 @@ import { ref } from 'vue'
 		DrawerRoot,
 		DrawerTitle,
 		DrawerTrigger,
-	} from 'vuedrawer'
+	} from '@guillemservera/vue-drawer'
 
 const open = ref(false)
 </script>

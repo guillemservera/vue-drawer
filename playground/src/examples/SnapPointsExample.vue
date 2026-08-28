@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { DrawerSnapPoint } from 'vuedrawer'
+import type { DrawerSnapPoint } from '@guillemservera/vue-drawer'
 import {
 	DrawerContent,
 	DrawerDescription,
@@ -9,7 +9,7 @@ import {
 	DrawerPortal,
 	DrawerRoot,
 	DrawerTitle,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
 
 const props = defineProps<{ styled: boolean }>()

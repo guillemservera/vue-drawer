@@ -11,11 +11,11 @@ VueDrawer is an initial `0.1.0` release. The API is usable, but still expected t
 ## Installation
 
 ```bash
-npm install vuedrawer
+npm install @guillemservera/vue-drawer
 ```
 
 ```bash
-pnpm add vuedrawer
+pnpm add @guillemservera/vue-drawer
 ```
 
 Zero runtime dependencies. Vue is the only peer dependency. VueDrawer is ESM-only: use `import`; CommonJS `require()` is not supported.
@@ -35,7 +35,7 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerClose,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 
 const open = ref(false)
 </script>
@@ -93,7 +93,7 @@ import {
   DrawerHandle,
   DrawerTitle,
   DrawerDescription,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 ```
 
 `DrawerRoot` owns state and behavior. `DrawerPortal` teleports overlay/content to `body` by default. `DrawerOverlay` is optional and visual; outside dismissal is handled by the internal dismiss layer so consumers can style, omit or replace the overlay. `DrawerContent` is the dialog surface. `DrawerHandle` cycles snap points on click and owns handle-only gestures when `handleOnly` is enabled. `DrawerClose` closes the current root by default and can close the full nested stack with `scope="all"`. `DrawerTitle` and `DrawerDescription` register accessible IDs for `DrawerContent`.
@@ -237,7 +237,7 @@ import type {
   DrawerRootEmits,
   DrawerSnapPoint,
   DrawerPortalTarget,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 ```
 
 ## Accessibility
@@ -386,7 +386,7 @@ pnpm typecheck
 pnpm build
 ```
 
-The playground lives in `playground/` and is not published to npm. It imports VueDrawer with the public package name, `vuedrawer`; the playground Vite config aliases that name to `src/index.ts`.
+The playground lives in `playground/` and is not published to npm. It imports VueDrawer with the public package name, `@guillemservera/vue-drawer`; the playground Vite config aliases that name to `src/index.ts`.
 
 ## License
 

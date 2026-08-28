@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { DrawerDirection } from 'vuedrawer'
+import type { DrawerDirection } from '@guillemservera/vue-drawer'
 import {
 	DrawerContent,
 	DrawerDescription,
@@ -8,7 +8,7 @@ import {
 	DrawerPortal,
 	DrawerRoot,
 	DrawerTitle,
-} from 'vuedrawer'
+} from '@guillemservera/vue-drawer'
 import { contentClass, overlayClass } from './demoClasses'
 import type { DemoContentVariant } from './demoClasses'
 

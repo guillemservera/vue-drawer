@@ -28,7 +28,7 @@ export default defineConfig(({ command }) => ({
   root: command === 'serve' ? 'playground' : process.cwd(),
   resolve: {
     alias: {
-      vuedrawer: resolve(__dirname, 'src/index.ts'),
+      '@guillemservera/vue-drawer': resolve(__dirname, 'src/index.ts'),
     },
   },
   plugins: [

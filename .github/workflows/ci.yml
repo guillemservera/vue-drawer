@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: vuedrawer-ci-${{ github.ref }}
+  group: vue-drawer-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

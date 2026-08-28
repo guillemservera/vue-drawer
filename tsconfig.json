@@ -6,7 +6,7 @@
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
-      "vuedrawer": [
+      "@guillemservera/vue-drawer": [
         "./src/index.ts"
       ]
     },

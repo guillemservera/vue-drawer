@@ -47,12 +47,12 @@ importers:
 
   playground:
     dependencies:
+      '@guillemservera/vue-drawer':
+        specifier: workspace:*
+        version: link:..
       vue:
         specifier: ^3.5.0
         version: 3.5.34(typescript@6.0.3)
-      vuedrawer:
-        specifier: workspace:*
-        version: link:..
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: latest
