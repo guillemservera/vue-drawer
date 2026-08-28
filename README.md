@@ -18,7 +18,7 @@ npm install vuedrawer
 pnpm add vuedrawer
 ```
 
-Zero runtime dependencies. Vue is the only peer dependency.
+Zero runtime dependencies. Vue is the only peer dependency. VueDrawer is ESM-only: use `import`; CommonJS `require()` is not supported.
 
 ## Quick Start
 
