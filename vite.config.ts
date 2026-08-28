@@ -24,7 +24,6 @@ export default defineConfig(({ command }) => ({
     minify: 'esbuild',
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'VueDrawer',
       fileName: 'index',
       cssFileName: 'style',
       formats: ['es'],
@@ -34,9 +33,6 @@ export default defineConfig(({ command }) => ({
       external: ['vue'],
       output: {
         compact: true,
-        globals: {
-          vue: 'Vue',
-        },
       },
     },
   },
