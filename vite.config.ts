@@ -1,28 +1,7 @@
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
 import dts from 'vite-plugin-dts'
-import { defineConfig, transformWithEsbuild } from 'vite'
-import type { Plugin } from 'vite'
-
-function minifyLibraryOutput(): Plugin {
-  return {
-    name: 'minify-library-output',
-    async generateBundle(_options, bundle) {
-      for (const [fileName, chunk] of Object.entries(bundle)) {
-        if (chunk.type !== 'chunk' || !chunk.code || !fileName.endsWith('.js')) continue
-
-        const minified = await transformWithEsbuild(chunk.code, fileName, {
-          format: 'esm',
-          legalComments: 'none',
-          minify: true,
-          target: 'es2022',
-        })
-
-        chunk.code = minified.code
-      }
-    },
-  }
-}
+import { defineConfig } from 'vite'
 
 export default defineConfig(({ command }) => ({
   root: command === 'serve' ? 'playground' : process.cwd(),
@@ -53,7 +32,6 @@ export default defineConfig(({ command }) => ({
     reportCompressedSize: true,
     rollupOptions: {
       external: ['vue'],
-      plugins: [minifyLibraryOutput()],
       output: {
         compact: true,
         globals: {
