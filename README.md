@@ -25,6 +25,7 @@ Zero runtime dependencies. Vue is the only peer dependency. VueDrawer is ESM-onl
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
+import '@guillemservera/vue-drawer/style.css'
 import {
   DrawerRoot,
   DrawerTrigger,
@@ -157,7 +158,7 @@ Use `DrawerRootNested` instead of setting `nested` manually for nested drawers.
 
 `dismissible=false` prevents Escape, modal outside pointer, close-direction drag and overlay dismissal from closing the drawer. Use it with controlled state so your app still has an explicit way to close.
 
-`animation` controls the open animation and `closeAnimation` controls normal non-gesture closes. The default matches Vaul's slide-in and slide-out feel, with a shorter close duration than open duration. For example, `animation="fade" closeAnimation="slide"` gives a fade-in and the classic slide-out close. Drag gestures still follow the pointer and close with transform. The fade defaults are intentionally quick (`260ms` in, `180ms` out) with no movement, and can be tuned with CSS variables such as `--drawer-fade-enter-duration`, `--drawer-fade-leave-duration`, `--drawer-fade-ease`, and `--drawer-fade-enter-offset`.
+`animation` controls the open animation and `closeAnimation` controls normal non-gesture closes. The default slide motion matches Vaul's `500ms` duration and `cubic-bezier(0.32, 0.72, 0, 1)` easing for both drawer and overlay. For example, `animation="fade" closeAnimation="slide"` gives a fade-in and the classic slide-out close. Drag gestures still follow the pointer and close with transform. The fade defaults are intentionally quick (`260ms` in, `180ms` out) with no movement, and can be tuned with CSS variables such as `--drawer-fade-enter-duration`, `--drawer-fade-leave-duration`, `--drawer-fade-ease`, and `--drawer-fade-enter-offset`.
 
 `DrawerTitle` and `DrawerDescription` automatically register generated IDs with `DrawerContent`, which sets `aria-labelledby` and `aria-describedby` unless you provide those attributes yourself. `DrawerTrigger` renders an accessible button with `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls`. `DrawerClose` renders a button that closes the active root. Inside nested drawers, set `scope="all"` to close the top-level root and let the nested stack clean itself up. Opening a nested drawer adds Vaul-style depth only to the direct parent drawer content; VueDrawer does not scale the page background globally.
 
@@ -300,6 +301,20 @@ VueDrawer has two scroll-lock paths:
 - Desktop and non-iOS browsers use document overflow locking and scrollbar compensation.
 - Mobile Safari uses body fixed positioning, touch guards, edge-bounce prevention and input repositioning. It intentionally avoids forcing `html/body { overflow: hidden }` on iOS because that path causes Safari keyboard and browser-chrome issues.
 
+### Safari Browser Chrome Tint
+
+Safari 26 derives the color behind its bottom browser controls from fixed or sticky content at the viewport edge. To let it follow a bottom drawer, put the opaque surface background directly on the fixed `DrawerContent`, not only on an inner panel. WebKit may preserve the previously sampled page color when a full-width fixed drawer is roughly 90–105% of the viewport height, so prefer a height below 90% when dynamic browser-chrome tint matters:
+
+```vue
+<DrawerContent class="fixed inset-x-0 bottom-0 h-[85dvh] bg-white">
+  <div class="h-full overflow-y-auto">
+    ...
+  </div>
+</DrawerContent>
+```
+
+VueDrawer does not enforce a maximum height or inject a tint surface: full-height drawers are valid, visual styling belongs to consumers, and browser-chrome tint is a Safari-specific presentation concern. Applications that require both a 90%+ sheet and dynamic tint need to own that compatibility strategy.
+
 For scrollable content inside the drawer, mark the scrollable element:
 
 ```vue
@@ -336,17 +351,17 @@ VueDrawer uses neutral classes and data attributes:
 
 The package CSS intentionally does not include colors, shadows, borders, spacing, border radius or typography.
 
-For percentage snap points, size the drawer content along the snap axis so it can cover the largest requested snap point, for example a bottom drawer with `height: min(100dvh, 720px)` or a full-height side drawer.
+For percentage snap points, size the drawer content along the snap axis so it can cover the largest requested snap point, for example a bottom drawer with `height: min(85dvh, 720px)` or a full-height side drawer. If a bottom drawer must reach 90%+ of the viewport, account for the Safari browser-chrome behavior described above.
 
 Animation can be tuned with CSS variables on your drawer content and overlay:
 
 | Variable | Default |
 | --- | --- |
-| `--drawer-duration` | `420ms` |
-| `--drawer-duration-ms` | `420` |
+| `--drawer-duration` | `500ms` |
+| `--drawer-duration-ms` | `500` |
 | `--drawer-ease` | `cubic-bezier(0.32, 0.72, 0, 1)` |
-| `--drawer-close-duration` | `260ms` |
-| `--drawer-close-duration-ms` | `260` |
+| `--drawer-close-duration` | `500ms` |
+| `--drawer-close-duration-ms` | `500` |
 | `--drawer-close-ease` | `var(--drawer-ease)` |
 | `--drawer-offscreen-offset` | `24px` |
 | `--drawer-fade-enter-duration` | `260ms` |
