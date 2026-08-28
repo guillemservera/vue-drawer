@@ -19,6 +19,30 @@ export function getPointerPagePosition(event: PointerEvent) {
 	}
 }
 
+const CLICK_SUPPRESS_TIMEOUT_MS = 500
+
+/**
+ * Swallows the click that follows a dismissing pointerdown. Drawers close on
+ * pointerdown (overlay tap / outside tap) and the closing surface immediately
+ * stops hit-testing (`pointer-events: none`), so the browser would deliver the
+ * synthesized click to whatever interactive element sits underneath —
+ * activating it right as the drawer dismisses.
+ */
+export function suppressNextClickAfterPointerDismiss() {
+	if (typeof document === 'undefined' || typeof window === 'undefined') return
+
+	const swallowClick = (event: MouseEvent) => {
+		event.preventDefault()
+		event.stopPropagation()
+		document.removeEventListener('click', swallowClick, true)
+	}
+
+	document.addEventListener('click', swallowClick, true)
+	window.setTimeout(() => {
+		document.removeEventListener('click', swallowClick, true)
+	}, CLICK_SUPPRESS_TIMEOUT_MS)
+}
+
 export function resolvePointerDragIntent(options: ResolvePointerDragIntentOptions) {
 	const {
 		delta,

@@ -137,6 +137,8 @@ export interface DrawerRootContext {
 	setGestureClosing: (value: boolean) => void
 	setSkipCloseAnimation: (value: boolean) => void
 	setNestedChildOpen: (value: boolean, options?: { instant?: boolean }) => void
+	onNestedDrag: (closeProgress: number) => void
+	onNestedRelease: (isStillOpen: boolean) => void
 	resetInteractiveState: () => void
 	getContentTransition: (options?: { instant?: boolean, close?: boolean }) => string
 	getOverlayTransition: (options?: { instant?: boolean, close?: boolean }) => string

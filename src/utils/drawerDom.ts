@@ -1,6 +1,27 @@
 export const DRAWER_RECENT_OPEN_WINDOW_MS = 500
 const DRAWER_TRANSITION_FALLBACK_BUFFER_MS = 60
 const bodyPointerEventLocks = new Set<string>()
+
+export function focusWithDrawerMarker(element: HTMLElement): boolean {
+	element.setAttribute('data-drawer-return-focus', 'true')
+	element.focus({ preventScroll: true })
+	if (document.activeElement !== element) {
+		element.removeAttribute('data-drawer-return-focus')
+		return false
+	}
+
+	const clearMarker = () => {
+		queueMicrotask(() => {
+			if (!document.hasFocus() || document.activeElement === element) return
+			element.removeAttribute('data-drawer-return-focus')
+			element.removeEventListener('blur', clearMarker)
+			window.removeEventListener('focus', clearMarker)
+		})
+	}
+	element.addEventListener('blur', clearMarker)
+	window.addEventListener('focus', clearMarker)
+	return true
+}
 let previousBodyPointerEvents: string | null = null
 
 export function isDrawerTransitionEnd(

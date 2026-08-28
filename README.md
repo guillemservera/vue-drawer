@@ -71,6 +71,7 @@ VueDrawer ships only the functional CSS required for transforms, transitions, to
 - Reka/Radix-inspired dismiss layer without runtime dependencies.
 - Escape handling that closes only the top active drawer.
 - Modal focus scope with focus loop, focus restoration and outside focus guard.
+- Pointer-origin focus restoration avoids a spurious ring without suppressing keyboard `:focus-visible`.
 - `aria-hidden` isolation for modal content.
 - Preventable outside interaction and autofocus events.
 - Data attributes for styling and tests.

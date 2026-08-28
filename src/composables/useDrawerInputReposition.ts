@@ -49,7 +49,10 @@ export function useDrawerInputReposition(options: UseDrawerInputRepositionOption
 	}
 
 	function shouldWatchKeyboard() {
-		return open.value && modal.value && !nested.value && repositionInputs.value && direction.value === 'bottom'
+		// Nested drawers watch too: their content is portaled outside the parent
+		// content, and `hasFocusedInput` already scopes the layout to whichever
+		// drawer actually contains the focused control.
+		return open.value && modal.value && repositionInputs.value && direction.value === 'bottom'
 	}
 
 	function saveStyles(content: HTMLElement) {
@@ -115,10 +118,14 @@ export function useDrawerInputReposition(options: UseDrawerInputRepositionOption
 			return
 		}
 
-		const top = Math.max(contentRect.top, TOP_VIEWPORT_GUTTER)
-		const availableHeight = Math.max(viewport.height - top, MIN_DRAWER_HEIGHT)
-		const fixedHeight = Math.max((initialDrawerHeight || contentRect.height) - keyboardOffset, MIN_DRAWER_HEIGHT)
-		const nextHeight = fixed.value ? fixedHeight : Math.max(Math.min(contentRect.height, availableHeight), MIN_DRAWER_HEIGHT)
+		// Lift the whole drawer above the keyboard at its natural height; only
+		// shrink it when it doesn't fit in the visual viewport. Clamping against
+		// the drawer's pre-lift top would collapse short bottom sheets instead
+		// of raising them (footer buttons ended up covering the focused input).
+		const baseHeight = initialDrawerHeight || contentRect.height
+		const availableHeight = Math.max(viewport.height - TOP_VIEWPORT_GUTTER, MIN_DRAWER_HEIGHT)
+		const fixedHeight = Math.max(baseHeight - keyboardOffset, MIN_DRAWER_HEIGHT)
+		const nextHeight = fixed.value ? fixedHeight : Math.max(Math.min(baseHeight, availableHeight), MIN_DRAWER_HEIGHT)
 
 		content.style.bottom = `${keyboardOffset}px`
 		content.style.height = `${Math.round(nextHeight)}px`

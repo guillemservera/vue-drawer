@@ -1,6 +1,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { isSafariBrowser } from '../utils/drawerDom'
+import { DRAWER_BRANCH_SELECTOR, isDrawerNoDragTarget } from '../utils/drawerSelectors'
 
 interface BodyPositionSnapshot {
 	position: string
@@ -86,7 +87,7 @@ function hasStableScrollbarGutter(value: string) {
 function isKeyboardInput(target: EventTarget | null): target is HTMLElement {
 	if (!(target instanceof HTMLElement)) return false
 	if (target instanceof HTMLTextAreaElement) return true
-	if (target instanceof HTMLSelectElement) return true
+	if (target instanceof HTMLSelectElement) return false
 	if (!(target instanceof HTMLInputElement)) return target.isContentEditable
 
 	return !nonTextInputTypes.has(target.type)
@@ -226,15 +227,22 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 	function getScrollParent(node: Element) {
 		let current: Element | null = node
 
-		if (current && isScrollableElement(current) && !current.hasAttribute('data-drawer-scroll-axis')) {
+		while (current) {
+			if (isScrollableElement(current)) {
+				// `data-drawer-scroll-axis` stays as an explicit consumer override
+				// (it also drives touch-action/overscroll rules in drawer.css), e.g.
+				// for scrollers whose content does not overflow yet. Without it we
+				// trust computed overflow, but only with real scroll room so
+				// overflow:auto wrappers without overflowing content are walked past.
+				if (current.hasAttribute('data-drawer-scroll-axis') || current.scrollHeight > current.clientHeight) {
+					return current
+				}
+			}
+
 			current = current.parentElement
 		}
 
-		while (current && !isScrollableElement(current)) {
-			current = current.parentElement
-		}
-
-		return current || document.scrollingElement || document.documentElement
+		return document.scrollingElement || document.documentElement
 	}
 
 	function getTouchPoint(event: TouchEvent) {
@@ -251,16 +259,26 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 	}
 
 	function isNoDragElement(target: Element) {
-		return Boolean(target.closest('[data-drawer-no-drag], [data-vaul-no-drag]'))
+		return isDrawerNoDragTarget(target)
 	}
 
-	function findHorizontalPanContainer(target: Element, drawer: HTMLElement) {
+	function getDrawerBranchRoot(target: Element) {
+		const branch = target.closest(DRAWER_BRANCH_SELECTOR)
+		return branch instanceof HTMLElement ? branch : null
+	}
+
+	function getTouchBoundary(target: Element, drawer: HTMLElement | null) {
+		if (drawer?.contains(target)) return drawer
+		return getDrawerBranchRoot(target)
+	}
+
+	function findHorizontalPanContainer(target: Element, boundary: HTMLElement) {
 		let current: Element | null = target
 
-		while (current && drawer.contains(current)) {
+		while (current && boundary.contains(current)) {
 			if (current instanceof HTMLElement) {
 				const style = window.getComputedStyle(current)
-				const touchAction = style.touchAction.replace(/\s+/g, '')
+				const touchAction = (style.touchAction || '').replace(/\s+/g, '')
 				const canPanHorizontally = touchAction.includes('pan-x') || touchAction === 'manipulation'
 				const hasHorizontalOverflow = current.scrollWidth > current.clientWidth + 1
 
@@ -290,11 +308,19 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 		let startX = 0
 		let startY = 0
 		let lastY = 0
+		const liftedInputs = new Set<HTMLElement>()
 
 		function temporarilyLiftInput(target: HTMLElement) {
+			// touchend focuses the input, which fires the focus listener synchronously;
+			// a second lift would capture `-2000px` as the "previous" transform and the
+			// restore would strand the input off-screen. Lift once per frame.
+			if (liftedInputs.has(target)) return
+			liftedInputs.add(target)
+
 			const previousTransform = target.style.transform
 			target.style.transform = 'translateY(-2000px)'
 			window.requestAnimationFrame(() => {
+				liftedInputs.delete(target)
 				target.style.transform = previousTransform
 			})
 		}
@@ -303,7 +329,9 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 			const drawer = contentElement.value
 			if (!drawer?.contains(target)) return
 
-			const inputScroller = getScrollParent(target)
+			// Start from the parent: a self-scrollable input (e.g. an overflowing
+			// textarea) must be revealed by its containing scroller, not by itself.
+			const inputScroller = getScrollParent(target.parentElement ?? target)
 			if (inputScroller === document.documentElement || inputScroller === document.body) return
 			if (!drawer.contains(inputScroller)) return
 
@@ -331,13 +359,20 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 			startY = touchPoint.y
 			lastY = touchPoint.y
 
-			if (!(target instanceof Element) || !drawer?.contains(target)) {
+			if (!(target instanceof Element)) {
 				scrollable = null
 				horizontalPanContainer = null
 				return
 			}
 
-			if (isOwnedByAnotherOpenDrawer(target, drawer)) {
+			const boundary = getTouchBoundary(target, drawer)
+			if (!boundary) {
+				scrollable = null
+				horizontalPanContainer = null
+				return
+			}
+
+			if (drawer?.contains(target) && isOwnedByAnotherOpenDrawer(target, drawer)) {
 				scrollable = null
 				horizontalPanContainer = null
 				return
@@ -350,7 +385,7 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 			}
 
 			scrollable = getScrollParent(target)
-			horizontalPanContainer = findHorizontalPanContainer(target, drawer)
+			horizontalPanContainer = findHorizontalPanContainer(target, boundary)
 		}
 
 		const handleTouchMove = (event: TouchEvent) => {
@@ -367,7 +402,13 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 				return
 			}
 
-			if (!(target instanceof Element) || !drawer?.contains(target)) {
+			if (!(target instanceof Element)) {
+				event.preventDefault()
+				return
+			}
+
+			const boundary = getTouchBoundary(target, drawer)
+			if (!boundary) {
 				event.preventDefault()
 				return
 			}
@@ -386,7 +427,7 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 				return
 			}
 
-			if (!scrollable || !drawer.contains(scrollable)) {
+			if (!scrollable || !boundary.contains(scrollable)) {
 				event.preventDefault()
 				return
 			}
@@ -625,7 +666,8 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 		}
 
 		const shouldKeepBodyPosition = typeof document !== 'undefined' && modal.value && preventScroll.value && !noBodyStyles.value
-			? Boolean(document.querySelector('[data-drawer-content][data-state="open"]'))
+			? [...document.querySelectorAll('[data-drawer-content][data-state="open"]')]
+				.some(element => element !== contentElement.value)
 			: false
 
 		if (hasDocumentOverscrollLock.value) {

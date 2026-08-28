@@ -106,6 +106,8 @@ const {
 	getRestingOverlayOpacity: root.getRestingOverlayOpacity,
 	animateToSnapPoint: root.animateToSnapPoint,
 	resetInteractiveState: root.resetInteractiveState,
+	onNestedDrag: closeProgress => root.parentContext?.onNestedDrag(closeProgress),
+	onNestedRelease: isStillOpen => root.parentContext?.onNestedRelease(isStillOpen),
 })
 const contentRef = ref<HTMLElement | null>(null)
 

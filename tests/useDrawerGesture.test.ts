@@ -52,13 +52,14 @@ function createPointerEvent(
 	target: HTMLElement,
 	pointerId: number,
 	clientY: number,
+	clientX = 0,
 ) {
 	const event = new PointerEvent(type, {
 		bubbles: true,
 		cancelable: true,
 		pointerId,
 		pointerType: 'touch',
-		clientX: 0,
+		clientX,
 		clientY,
 	})
 
@@ -143,6 +144,8 @@ describe('useDrawerGesture', () => {
 					getRestingOverlayOpacity: () => 1,
 					animateToSnapPoint: () => undefined,
 					resetInteractiveState: () => undefined,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
 				})
 
 				expose({
@@ -261,6 +264,8 @@ describe('useDrawerGesture', () => {
 					getRestingOverlayOpacity: () => 1,
 					animateToSnapPoint: () => undefined,
 					resetInteractiveState: () => undefined,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
 				})
 
 				expose({
@@ -375,6 +380,8 @@ describe('useDrawerGesture', () => {
 					getRestingOverlayOpacity: () => 1,
 					animateToSnapPoint: () => undefined,
 					resetInteractiveState,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
 				})
 
 				expose({
@@ -510,6 +517,8 @@ describe('useDrawerGesture', () => {
 					getRestingOverlayOpacity: () => 1,
 					animateToSnapPoint: () => undefined,
 					resetInteractiveState: () => undefined,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
 				})
 
 				expose({
@@ -615,6 +624,8 @@ describe('useDrawerGesture', () => {
 					getRestingOverlayOpacity: () => 1,
 					animateToSnapPoint: () => undefined,
 					resetInteractiveState: () => undefined,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
 				})
 
 				expose({
@@ -643,6 +654,191 @@ describe('useDrawerGesture', () => {
 		expect(exposed.input.setPointerCapture).not.toHaveBeenCalled()
 		expect(exposed.isDragging.value).toBe(false)
 		expect(exposed.requestOpenChange).not.toHaveBeenCalled()
+
+		wrapper.unmount()
+	})
+
+	// Regression guard: vertical bottom sheets must be draggable-to-dismiss even
+	// when the gesture starts on an interactive control (button/link/list row),
+	// as long as the scroll body is at the top. Only explicit [data-*-no-drag]
+	// zones (and native SELECT) opt out — a blanket interactive block previously
+	// killed drag-to-dismiss on drawers with a scrollable body.
+	it('captures vertical drag-to-dismiss started on an interactive control at scroll top', () => {
+		const Harness = defineComponent({
+			setup(_, { expose }) {
+				const content = document.createElement('div')
+				const overlay = document.createElement('div')
+				const button = document.createElement('button')
+				const label = document.createElement('span')
+				button.type = 'button'
+				label.textContent = 'Open menu'
+				button.appendChild(label)
+				content.appendChild(button)
+
+				Object.assign(label, {
+					setPointerCapture: vi.fn(),
+					hasPointerCapture: vi.fn(() => false),
+					releasePointerCapture: vi.fn(),
+				})
+
+				const open = ref(true)
+				const gestureClosing = ref(false)
+				const isDragging = ref(false)
+				const preventCloseAutoFocusOnce = ref(false)
+				const requestOpenChange = vi.fn((value: boolean) => {
+					open.value = value
+				})
+
+				const gesture = useDrawerGesture({
+					open,
+					openedAt: ref(Date.now() - 1000),
+					direction: ref('bottom'),
+					dismissible: ref(true),
+					closeThreshold: ref(0.25),
+					scrollLockTimeout: ref(500),
+					snapToSequentialPoint: ref(false),
+					hasSnapPoints: ref(false),
+					activeSnapPointIndex: ref(0),
+					fadeFromIndex: ref<number | undefined>(undefined),
+					contentElement: ref(content),
+					overlayElement: ref(overlay),
+					isDragging,
+					gestureClosing,
+					preventCloseAutoFocusOnce,
+					requestOpenChange,
+					setSkipCloseAnimation: () => undefined,
+					setGestureClosing(value: boolean) {
+						gestureClosing.value = value
+					},
+					emitDrag: vi.fn(),
+					emitRelease: vi.fn(),
+					getContentTransition: () => 'transform 420ms ease',
+					getOverlayTransition: () => 'opacity 420ms ease',
+					getVisibleDrawerSize: () => 320,
+					getSnapPointBaseSize: () => 640,
+					getSnapPointsOffset: () => [],
+					getRestingOffset: () => 0,
+					getRestingOverlayOpacity: () => 1,
+					animateToSnapPoint: () => undefined,
+					resetInteractiveState: () => undefined,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
+				})
+
+				expose({
+					gesture,
+					isDragging,
+					label,
+					requestOpenChange,
+				})
+
+				return () => null
+			},
+		})
+
+		const wrapper = mount(Harness)
+		const exposed = wrapper.vm.$.exposed as {
+			gesture: ReturnType<typeof useDrawerGesture>
+			isDragging: { value: boolean }
+			label: HTMLSpanElement & { setPointerCapture: ReturnType<typeof vi.fn> }
+			requestOpenChange: ReturnType<typeof vi.fn>
+		}
+
+		exposed.gesture.handlePointerDown(createPointerEvent('pointerdown', exposed.label, 1, 0))
+		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.label, 1, 140))
+
+		// The drag engages from the interactive control (button) — the pre-fix
+		// interactive block would have left isDragging false here.
+		expect(exposed.isDragging.value).toBe(true)
+
+		exposed.gesture.handlePointerUp(createPointerEvent('pointerup', exposed.label, 1, 140))
+
+		wrapper.unmount()
+	})
+
+	// Regression guard: horizontal drawers (nav sidebars) must remain swipeable
+	// even when the gesture starts on an interactive element, because their whole
+	// surface is nav buttons/links. Only vertical sheets treat interactive
+	// controls as no-drag zones (see the test above).
+	it('captures horizontal swipe gestures that start on nav buttons', () => {
+		const Harness = defineComponent({
+			setup(_, { expose }) {
+				const content = document.createElement('div')
+				const overlay = document.createElement('div')
+				const button = document.createElement('button')
+				button.type = 'button'
+				button.textContent = 'Backtest'
+				content.appendChild(button)
+
+				Object.assign(button, {
+					setPointerCapture: vi.fn(),
+					hasPointerCapture: vi.fn(() => false),
+					releasePointerCapture: vi.fn(),
+				})
+
+				const open = ref(true)
+				const gestureClosing = ref(false)
+				const isDragging = ref(false)
+				const preventCloseAutoFocusOnce = ref(false)
+				const requestOpenChange = vi.fn((value: boolean) => {
+					open.value = value
+				})
+
+				const gesture = useDrawerGesture({
+					open,
+					openedAt: ref(Date.now() - 1000),
+					direction: ref('left'),
+					dismissible: ref(true),
+					closeThreshold: ref(0.25),
+					scrollLockTimeout: ref(500),
+					snapToSequentialPoint: ref(false),
+					hasSnapPoints: ref(false),
+					activeSnapPointIndex: ref(0),
+					fadeFromIndex: ref<number | undefined>(undefined),
+					contentElement: ref(content),
+					overlayElement: ref(overlay),
+					isDragging,
+					gestureClosing,
+					preventCloseAutoFocusOnce,
+					requestOpenChange,
+					setSkipCloseAnimation: () => undefined,
+					setGestureClosing(value: boolean) {
+						gestureClosing.value = value
+					},
+					emitDrag: vi.fn(),
+					emitRelease: vi.fn(),
+					getContentTransition: () => 'transform 420ms ease',
+					getOverlayTransition: () => 'opacity 420ms ease',
+					getVisibleDrawerSize: () => 320,
+					getSnapPointBaseSize: () => 640,
+					getSnapPointsOffset: () => [],
+					getRestingOffset: () => 0,
+					getRestingOverlayOpacity: () => 1,
+					animateToSnapPoint: () => undefined,
+					resetInteractiveState: () => undefined,
+					onNestedDrag: () => undefined,
+					onNestedRelease: () => undefined,
+				})
+
+				expose({ gesture, isDragging, button, requestOpenChange })
+
+				return () => null
+			},
+		})
+
+		const wrapper = mount(Harness)
+		const exposed = wrapper.vm.$.exposed as {
+			gesture: ReturnType<typeof useDrawerGesture>
+			isDragging: { value: boolean }
+			button: HTMLButtonElement
+			requestOpenChange: ReturnType<typeof vi.fn>
+		}
+
+		// Swipe left across the nav button: clientX 200 -> 40 closes a left drawer.
+		exposed.gesture.handlePointerDown(createPointerEvent('pointerdown', exposed.button, 1, 0, 200))
+		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.button, 1, 0, 40))
+
+		expect(exposed.isDragging.value).toBe(true)
 
 		wrapper.unmount()
 	})

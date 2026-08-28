@@ -9,6 +9,7 @@ import DrawerPortal from '../src/components/DrawerPortal.vue'
 import DrawerRoot from '../src/components/DrawerRoot.vue'
 import DrawerTitle from '../src/components/DrawerTitle.vue'
 import DrawerTrigger from '../src/components/DrawerTrigger.vue'
+import { clearEscapeLayersForTest } from '../src/composables/useDrawerEscapeLayer'
 import { clearDrawerDismissableLayersForTest } from '../src/composables/useDrawerDismissableLayer'
 
 vi.mock('../src/composables/useDrawerScrollLock', () => ({
@@ -21,6 +22,7 @@ describe('Drawer accessibility primitives', () => {
 	})
 
 	afterEach(() => {
+		clearEscapeLayersForTest()
 		clearDrawerDismissableLayersForTest()
 		vi.restoreAllMocks()
 	})
@@ -109,6 +111,60 @@ describe('Drawer accessibility primitives', () => {
 		await nextTick()
 
 		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(false)
+	})
+
+	it.each([
+		['keyboard shortcut', '.keyboard-origin', 'keydown'],
+		['menu item', '.menu-origin', 'click'],
+	] as const)('restores focus to the %s origin after close', async (_name, selector, eventType) => {
+		const Harness = defineComponent({
+			components: {
+				DrawerClose,
+				DrawerContent,
+				DrawerRoot,
+			},
+			setup() {
+				const open = ref(false)
+				function openFromShortcut(event: KeyboardEvent) {
+					if ((event.metaKey || event.ctrlKey) && event.key === '/') open.value = true
+				}
+				return { open, openFromShortcut }
+			},
+			template: `
+				<button class="keyboard-origin" type="button" @keydown="openFromShortcut">Keyboard origin</button>
+				<button class="menu-origin" type="button" @click="open = true">Menu origin</button>
+				<DrawerRoot v-model:open="open">
+					<DrawerContent>
+						<DrawerClose>Close</DrawerClose>
+					</DrawerContent>
+				</DrawerRoot>
+			`,
+		})
+		const wrapper = mount(Harness, {
+			attachTo: document.body,
+			global: {
+				stubs: {
+					Transition: false,
+				},
+			},
+		})
+		const origin = wrapper.get(selector).element as HTMLButtonElement
+		origin.focus()
+
+		if (eventType === 'keydown') {
+			origin.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true }))
+		}
+		else {
+			await wrapper.get(selector).trigger('click')
+		}
+		await nextTick()
+		await nextTick()
+		await wrapper.get('[data-drawer-close]').trigger('click')
+		await nextTick()
+		await nextTick()
+
+		expect(document.activeElement).toBe(origin)
+		wrapper.unmount()
 	})
 
 	it('teleports to a configured portal target', async () => {
@@ -276,6 +332,121 @@ describe('Drawer accessibility primitives', () => {
 		expect(pointerDownOutside).toHaveBeenCalledTimes(1)
 		expect(interactOutside).toHaveBeenCalledTimes(1)
 		expect(pointerEvent.defaultPrevented).toBe(true)
+		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(false)
+
+		wrapper.unmount()
+		outside.remove()
+	})
+
+	it('treats drawer branch portals as inside the modal drawer', async () => {
+		const branch = document.createElement('button')
+		branch.type = 'button'
+		branch.setAttribute('data-drawer-branch', '')
+		document.body.appendChild(branch)
+		const pointerDownOutside = vi.fn()
+		const focusOutside = vi.fn()
+
+		const Harness = defineComponent({
+			components: {
+				DrawerContent,
+				DrawerRoot,
+			},
+			setup() {
+				const open = ref(true)
+				return {
+					focusOutside,
+					open,
+					pointerDownOutside,
+				}
+			},
+			template: `
+				<DrawerRoot v-model:open="open">
+					<DrawerContent
+						@focus-outside="focusOutside"
+						@pointer-down-outside="pointerDownOutside"
+					>
+						<button type="button">Inside drawer</button>
+					</DrawerContent>
+				</DrawerRoot>
+			`,
+		})
+
+		const wrapper = mount(Harness, {
+			attachTo: document.body,
+			global: {
+				stubs: {
+					Transition: false,
+				},
+			},
+		})
+
+		await nextTick()
+
+		const pointerEvent = new PointerEvent('pointerdown', { bubbles: true, cancelable: true })
+		branch.dispatchEvent(pointerEvent)
+		await nextTick()
+
+		branch.focus()
+		await nextTick()
+		await Promise.resolve()
+
+		const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+		branch.dispatchEvent(escapeEvent)
+		await nextTick()
+
+		expect(pointerDownOutside).not.toHaveBeenCalled()
+		expect(focusOutside).not.toHaveBeenCalled()
+		expect(pointerEvent.defaultPrevented).toBe(false)
+		expect(escapeEvent.defaultPrevented).toBe(false)
+		expect(document.activeElement).toBe(branch)
+		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(true)
+
+		wrapper.unmount()
+		branch.remove()
+	})
+
+	it('stops Escape from reaching listeners behind the drawer once a layer handles it', async () => {
+		const outside = document.createElement('button')
+		outside.type = 'button'
+		document.body.appendChild(outside)
+		// Stands in for an Escape consumer behind the drawer (page-level shortcut,
+		// enclosing dialog). The escape layer captures on `document`, so a handled
+		// Escape must never reach this bubble-phase listener.
+		const behindDrawer = vi.fn()
+		document.addEventListener('keydown', behindDrawer)
+
+		const Harness = defineComponent({
+			components: {
+				DrawerContent,
+				DrawerRoot,
+			},
+			setup() {
+				const open = ref(true)
+				return { open }
+			},
+			template: `
+				<DrawerRoot v-model:open="open">
+					<DrawerContent aria-label="Account filters" />
+				</DrawerRoot>
+			`,
+		})
+
+		const wrapper = mount(Harness, {
+			attachTo: document.body,
+			global: {
+				stubs: {
+					Transition: false,
+				},
+			},
+		})
+
+		await nextTick()
+		const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+		outside.dispatchEvent(escapeEvent)
+		document.removeEventListener('keydown', behindDrawer)
+		await nextTick()
+
+		expect(behindDrawer).not.toHaveBeenCalled()
 		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(false)
 
 		wrapper.unmount()

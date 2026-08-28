@@ -73,7 +73,7 @@ describe('DrawerOverlay', () => {
 		wrapper.unmount()
 	})
 
-	it('absorbs overlay pointerdown and dismisses on pointerup', async () => {
+	it('absorbs overlay pointerdown and dismisses immediately', async () => {
 		const wrapper = mount(Harness, {
 			attachTo: document.body,
 			global: {
@@ -91,13 +91,6 @@ describe('DrawerOverlay', () => {
 		await nextTick()
 
 		expect(pointerDown.defaultPrevented).toBe(true)
-		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(true)
-
-		const pointerUp = new Event('pointerup', { bubbles: true, cancelable: true })
-		overlay.element.dispatchEvent(pointerUp)
-		await nextTick()
-
-		expect(pointerUp.defaultPrevented).toBe(true)
 		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(false)
 		const probe = wrapper.getComponent(ContextProbe).vm.$.exposed as {
 			root: ReturnType<typeof useDrawerRootContext>

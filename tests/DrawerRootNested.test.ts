@@ -177,6 +177,41 @@ describe('DrawerRootNested', () => {
 		wrapper.unmount()
 	})
 
+	it('syncs the parent transform while a nested child is gesture-dragged', async () => {
+		const wrapper = mount(NestedInstantHarness, {
+			attachTo: document.body,
+			global: {
+				stubs: {
+					Transition: false,
+				},
+			},
+		})
+
+		await nextTick()
+
+		const probes = wrapper.findAllComponents(ContextProbe)
+		const parentProbe = probes[0]!.vm.$.exposed as {
+			root: ReturnType<typeof useDrawerRootContext>
+		}
+		const content = parentProbe.root.contentElement.value!
+
+		parentProbe.root.onNestedDrag(0.5)
+
+		expect(content.style.transition).toBe('none')
+		expect(content.style.transform).toContain('translate3d(0, -8px, 0)')
+
+		parentProbe.root.onNestedRelease(true)
+
+		expect(content.style.transform).toContain('translate3d(0, -16px, 0)')
+
+		parentProbe.root.onNestedDrag(0.5)
+		parentProbe.root.onNestedRelease(false)
+
+		expect(content.style.transform).toBe('translate3d(0, 0px, 0)')
+
+		wrapper.unmount()
+	})
+
 	it('forces an already-closing nested drawer to finish instantly when the parent closes', async () => {
 		const wrapper = mount(NestedInstantHarness, {
 			attachTo: document.body,

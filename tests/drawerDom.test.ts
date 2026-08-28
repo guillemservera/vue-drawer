@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	DRAWER_RECENT_OPEN_WINDOW_MS,
+	focusWithDrawerMarker,
 	getDrawerTransitionDurationMs,
 	isDrawerTransitionEnd,
 	restoreBodyPointerEvents,
@@ -40,6 +41,32 @@ describe('drawerDom', () => {
 		expect(isDrawerTransitionEnd(matchingEvent, element, 'transform')).toBe(true)
 		expect(isDrawerTransitionEnd(nestedEvent, element, 'transform')).toBe(false)
 		expect(isDrawerTransitionEnd(createTransitionEndEvent('opacity'), element, 'transform')).toBe(false)
+	})
+
+	it('keeps restored focus ring suppression through window reactivation', async () => {
+		const target = document.createElement('button')
+		const next = document.createElement('button')
+		document.body.append(target, next)
+		const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(true)
+
+		expect(focusWithDrawerMarker(target)).toBe(true)
+		expect(target.dataset.drawerReturnFocus).toBe('true')
+
+		hasFocus.mockReturnValue(false)
+		target.dispatchEvent(new FocusEvent('blur'))
+		await Promise.resolve()
+		expect(target.dataset.drawerReturnFocus).toBe('true')
+
+		hasFocus.mockReturnValue(true)
+		window.dispatchEvent(new FocusEvent('focus'))
+		await Promise.resolve()
+		expect(target.dataset.drawerReturnFocus).toBe('true')
+
+		next.focus()
+		await Promise.resolve()
+		expect(target.dataset.drawerReturnFocus).toBeUndefined()
+		target.remove()
+		next.remove()
 	})
 
 	it('restores body pointer events only when the body is blocked', () => {

@@ -5,6 +5,8 @@ declare module '*.vue' {
 	export default component
 }
 
+declare module '*.css'
+
 interface ImportMetaEnv {
 	readonly DEV: boolean
 }

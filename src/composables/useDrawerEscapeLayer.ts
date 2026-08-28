@@ -1,4 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
+import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
 
 interface DrawerEscapeLayer {
 	id: string
@@ -36,6 +37,7 @@ function getTopmostEnabledLayer() {
 
 function handleDocumentKeyDown(event: KeyboardEvent) {
 	if (event.key !== 'Escape') return
+	if (isElementInsideDrawerBranch(event.target)) return
 
 	const layer = getTopmostEnabledLayer()
 	if (!layer) return

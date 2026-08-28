@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import {
 	DRAWER_DEFAULT_CLOSE_THRESHOLD,
 	DRAWER_DEFAULT_CLOSE_TRANSITION_DURATION_MS,
+	DRAWER_DEFAULT_OVERLAY_CLOSE_TRANSITION_DURATION_MS,
+	DRAWER_DEFAULT_OVERLAY_TRANSITION_DURATION_MS,
 	DRAWER_DEFAULT_SCROLL_LOCK_TIMEOUT,
 	DRAWER_DEFAULT_TRANSITION_DURATION_MS,
 	DRAWER_EASE,
@@ -334,22 +336,24 @@ function registerOverlayElement(element: HTMLElement | null) {
 	syncRestingStyles()
 }
 
-function getTransitionDuration(options: { instant?: boolean, close?: boolean } = {}) {
+function getTransitionDuration(
+	options: { instant?: boolean, close?: boolean } = {},
+	element = getTransitionElement(),
+	defaultDurationMs = DRAWER_DEFAULT_TRANSITION_DURATION_MS,
+	defaultCloseDurationMs = DRAWER_DEFAULT_CLOSE_TRANSITION_DURATION_MS,
+) {
 	if (options.instant || props.instantClose) return 1
-	const element = getTransitionElement()
-	if (!element) {
-		return options.close ? DRAWER_DEFAULT_CLOSE_TRANSITION_DURATION_MS : DRAWER_DEFAULT_TRANSITION_DURATION_MS
-	}
+	if (!element) return options.close ? defaultCloseDurationMs : defaultDurationMs
 
 	const styles = window.getComputedStyle(element)
 	const baseDuration = parseCssNumber(styles.getPropertyValue('--drawer-duration-ms'))
-	const baseDurationMs = baseDuration ?? DRAWER_DEFAULT_TRANSITION_DURATION_MS
+	const baseDurationMs = baseDuration ?? defaultDurationMs
 
 	if (!options.close) return baseDurationMs
 
 	const closeDuration = parseCssNumber(styles.getPropertyValue('--drawer-close-duration-ms'))
 	if (baseDurationMs <= 10) return baseDurationMs
-	return closeDuration ?? DRAWER_DEFAULT_CLOSE_TRANSITION_DURATION_MS
+	return closeDuration ?? defaultCloseDurationMs
 }
 
 function parseCssNumber(value: string) {
@@ -361,8 +365,7 @@ function getTransitionElement() {
 	return contentElement.value ?? overlayElement.value
 }
 
-function getTransitionEase(options: { close?: boolean } = {}) {
-	const element = getTransitionElement()
+function getTransitionEase(options: { close?: boolean } = {}, element = getTransitionElement()) {
 	if (!element) return DRAWER_EASE
 	const styles = window.getComputedStyle(element)
 	if (options.close) {
@@ -373,20 +376,27 @@ function getTransitionEase(options: { close?: boolean } = {}) {
 }
 
 function getContentTransition(options: { instant?: boolean, close?: boolean } = {}) {
-	return `transform ${getTransitionDuration(options)}ms ${getTransitionEase(options)}`
+	const element = contentElement.value ?? overlayElement.value
+	return `transform ${getTransitionDuration(options, element)}ms ${getTransitionEase(options, element)}`
 }
 
 function getOverlayTransition(options: { instant?: boolean, close?: boolean } = {}) {
-	return `opacity ${getTransitionDuration(options)}ms ${getTransitionEase(options)}`
+	const element = overlayElement.value ?? contentElement.value
+	return `opacity ${getTransitionDuration(
+		options,
+		element,
+		DRAWER_DEFAULT_OVERLAY_TRANSITION_DURATION_MS,
+		DRAWER_DEFAULT_OVERLAY_CLOSE_TRANSITION_DURATION_MS,
+	)}ms ${getTransitionEase(options, element)}`
 }
 
 function getRestingTransform() {
 	return getTranslateStyles(props.direction, getRestingOffset())
 }
 
-function getNestedCompositeTransform() {
+function getNestedCompositeTransform(closeProgress = 0) {
 	const restingOffset = getRestingOffset()
-	const nestedTransform = getNestedParentTransform(props.direction)
+	const nestedTransform = getNestedParentTransform(props.direction, closeProgress)
 
 	if (restingOffset <= 0) return nestedTransform
 	return `${getTranslateStyles(props.direction, restingOffset)} ${nestedTransform}`
@@ -438,6 +448,44 @@ function setNestedChildOpen(value: boolean, options: { instant?: boolean } = {})
 	content.style.transform = value ? getNestedCompositeTransform() : getRestingTransform()
 
 	if (value) return
+
+	const cleanup = waitForDrawerTransition(content, 'transform', () => {
+		if (nestedParentTransitionCleanup === cleanup) {
+			nestedParentTransitionCleanup = null
+		}
+		if (nestedChildOpen.value) return
+		content.style.transition = ''
+		content.style.transform = ''
+		syncRestingStyles()
+	})
+	nestedParentTransitionCleanup = cleanup
+}
+
+function onNestedDrag(closeProgress: number) {
+	const content = contentElement.value
+	if (!content || !open.value) return
+
+	cancelNestedParentTransition()
+	content.style.transition = 'none'
+	content.style.transform = getNestedCompositeTransform(closeProgress)
+}
+
+function onNestedRelease(isStillOpen: boolean) {
+	const content = contentElement.value
+	if (!content) return
+
+	cancelNestedParentTransition()
+
+	if (!isStillOpen) {
+		nestedChildOpen.value = false
+	}
+
+	content.style.transition = getContentTransition({ close: !isStillOpen })
+	content.style.transform = isStillOpen
+		? getNestedCompositeTransform(0)
+		: getRestingTransform()
+
+	if (isStillOpen) return
 
 	const cleanup = waitForDrawerTransition(content, 'transform', () => {
 		if (nestedParentTransitionCleanup === cleanup) {
@@ -641,6 +689,8 @@ provideDrawerRootContext({
 	setGestureClosing,
 	setSkipCloseAnimation,
 	setNestedChildOpen,
+	onNestedDrag,
+	onNestedRelease,
 	resetInteractiveState,
 	getContentTransition,
 	getOverlayTransition,

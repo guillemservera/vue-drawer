@@ -15,10 +15,14 @@
 }
 
 .drawer-content {
-	position: relative;
+	position: var(--drawer-position, relative);
 	will-change: transform;
-	background: inherit;
-	background-color: inherit;
+	/* No `background: inherit` here on purpose: this rule is UNLAYERED, so it
+	   would beat consumers' Tailwind `bg-*` utilities and force them into
+	   `!important` just to make the content transparent (which then clips a
+	   rounded inner panel's corners). Consumers own their surface — on the
+	   content element or an inner panel — and the `::after` overscroll bleed
+	   below still inherits whatever background the content ends up with. */
 	transform: translate3d(0, var(--drawer-rest-offset, 0px), 0);
 	transform-origin: top center;
 	backface-visibility: hidden;
@@ -33,6 +37,12 @@
 
 .drawer-content[data-modal='true'] {
 	overscroll-behavior: contain;
+}
+
+/* Programmatic focus restoration should not turn a touch interaction into a visible focus ring. */
+[data-drawer-return-focus='true']:not(:focus-visible) {
+	outline: none !important;
+	box-shadow: none !important;
 }
 
 .drawer-content[data-state='closed'] {
@@ -265,6 +275,12 @@
 }
 
 .drawer-overlay {
+	--drawer-duration: 180ms;
+	--drawer-duration-ms: 180;
+	--drawer-ease: ease-out;
+	--drawer-close-duration: 140ms;
+	--drawer-close-duration-ms: 140;
+	--drawer-close-ease: ease-in;
 	will-change: opacity;
 	opacity: var(--drawer-rest-overlay-opacity, 1);
 	touch-action: none;
@@ -309,4 +325,50 @@
 .drawer-handle {
 	flex-shrink: 0;
 	pointer-events: auto;
+}
+
+/* Reduced motion, PER INSTANCE. Sliding is the drawer's default everywhere and
+ * stays that way; a single drawer asks to cross-fade in place instead by
+ * carrying `data-reduced-motion="fade"`. `DrawerContent` binds `$attrs` onto
+ * this same element, so a consumer just passes the attribute — no prop to
+ * thread through.
+ *
+ *   <DrawerContent data-reduced-motion="fade" ...>
+ *
+ * Opt-in and per instance, not automatic and app-wide, because this package is
+ * shared and its consumers do not agree on whether to honour the preference:
+ * an automatic guard would silently impose one surface's policy on all of them,
+ * and an app-level switch would still force every drawer in that app to match.
+ * A full-height sheet crossing the viewport is the canonical vestibular
+ * trigger, so this is worth reaching for on surfaces people sit in for hours.
+ *
+ * The DRAG gesture is deliberately untouched even when opted in: tracking the
+ * pointer 1:1 is direct manipulation, not automatic motion, and freezing it
+ * would break the interaction rather than soften it.
+ *
+ * `!important` is load-bearing. The offscreen transforms come from a direction
+ * matrix of four-part selectors
+ * (`.drawer-content[data-direction='x'][data-animation='slide'].drawer-content-enter-from`),
+ * which outranks this rule on specificity; restating all twelve here would rot
+ * the next time a direction or animation mode is added.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.drawer-content[data-reduced-motion='fade'].drawer-content-enter-active,
+	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-active,
+	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-active--slide {
+		transition-property: opacity;
+	}
+
+	.drawer-content[data-reduced-motion='fade'].drawer-content-enter-from,
+	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-to,
+	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-to--slide {
+		transform: none !important;
+		opacity: 0;
+	}
+
+	.drawer-content[data-reduced-motion='fade'].drawer-content-enter-to,
+	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-from {
+		transform: none !important;
+		opacity: 1;
+	}
 }

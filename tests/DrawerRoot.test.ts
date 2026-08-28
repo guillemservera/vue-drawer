@@ -144,7 +144,7 @@ const CloseDurationHarness = defineComponent({
 	template: `
 		<DrawerRoot default-open>
 			<DrawerOverlay
-				style="--drawer-duration-ms: 420; --drawer-ease: ease; --drawer-close-duration-ms: 240; --drawer-close-ease: ease-out;"
+				style="--drawer-duration-ms: 180; --drawer-ease: ease-out; --drawer-close-duration-ms: 140; --drawer-close-ease: ease-in;"
 			/>
 			<DrawerContent
 				aria-label="Test drawer"
@@ -363,7 +363,7 @@ describe('DrawerRoot', () => {
 		wrapper.unmount()
 	})
 
-	it('uses a shorter close transition duration for drawer-owned close animations', async () => {
+	it('keeps backdrop timing independent from drawer movement', async () => {
 		const wrapper = mount(CloseDurationHarness, {
 			attachTo: document.body,
 			global: {
@@ -381,7 +381,8 @@ describe('DrawerRoot', () => {
 
 		expect(probe.root.getContentTransition()).toBe('transform 420ms ease')
 		expect(probe.root.getContentTransition({ close: true })).toBe('transform 240ms ease-out')
-		expect(probe.root.getOverlayTransition({ close: true })).toBe('opacity 240ms ease-out')
+		expect(probe.root.getOverlayTransition()).toBe('opacity 180ms ease-out')
+		expect(probe.root.getOverlayTransition({ close: true })).toBe('opacity 140ms ease-in')
 
 		wrapper.unmount()
 	})

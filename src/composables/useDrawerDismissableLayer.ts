@@ -4,6 +4,8 @@ import type {
 	DrawerFocusOutsideEvent,
 	DrawerPointerDownOutsideEvent,
 } from '../utils/drawerTypes'
+import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
+import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
 
 interface DrawerLayer {
 	id: string
@@ -49,6 +51,7 @@ function handleDocumentPointerDown(event: PointerEvent) {
 	const layer = getTopmostEnabledLayer()
 	if (!layer || isEventInsideLayer(event, layer)) return
 	if (isOverlayTarget(event)) return
+	if (isElementInsideDrawerBranch(event.target)) return
 
 	const outsideEvent = new CustomEvent<{ originalEvent: PointerEvent }>('drawer.pointerDownOutside', {
 		cancelable: true,
@@ -59,12 +62,16 @@ function handleDocumentPointerDown(event: PointerEvent) {
 
 	if (layer.modal()) {
 		event.preventDefault()
+		if (!outsideEvent.defaultPrevented) {
+			suppressNextClickAfterPointerDismiss()
+		}
 	}
 }
 
 function handleDocumentFocusIn(event: FocusEvent) {
 	const layer = getTopmostEnabledLayer()
 	if (!layer || isEventInsideLayer(event, layer)) return
+	if (isElementInsideDrawerBranch(event.target)) return
 
 	const outsideEvent = new CustomEvent<{ originalEvent: FocusEvent }>('drawer.focusOutside', {
 		cancelable: true,

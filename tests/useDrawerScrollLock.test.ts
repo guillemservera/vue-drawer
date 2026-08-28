@@ -42,14 +42,21 @@ const TestHarness = defineComponent({
 
 		return {
 			contentElement,
+			open,
 		}
 	},
 	template: `
-		<div ref="contentElement">
+		<div ref="contentElement" data-drawer-content :data-state="open ? 'open' : 'closed'">
 			<div class="y-scroll" data-drawer-scroll-axis="y" style="overflow-y:auto;">
 				<div class="y-scroll-child" />
 			</div>
 			<div class="root-y-scroll" data-drawer-scroll-axis="y" style="overflow-y:auto;" />
+			<div class="plain-y-scroll" style="overflow-y:auto;">
+				<div class="plain-y-scroll-child" />
+			</div>
+			<div class="empty-y-scroll" style="overflow-y:auto;">
+				<div class="empty-y-scroll-child" />
+			</div>
 			<div class="x-scroll" data-drawer-scroll-axis="x" style="overflow-x:auto; touch-action:pan-x;">
 				<div class="x-scroll-child" style="width:240px; height:24px;" />
 			</div>
@@ -57,6 +64,9 @@ const TestHarness = defineComponent({
 				<input class="no-drag-input" type="range" />
 			</label>
 			<input class="text-input" />
+			<select class="native-select">
+				<option>One</option>
+			</select>
 		</div>
 	`,
 })
@@ -228,6 +238,27 @@ describe('useDrawerScrollLock', () => {
 		wrapper.unmount()
 	})
 
+	it('restores iOS body position styles when an open drawer unmounts', async () => {
+		document.body.style.position = 'relative'
+		document.body.style.top = '3px'
+		document.body.style.left = '4px'
+		document.body.style.right = '5px'
+		document.body.style.height = '6px'
+		const wrapper = mount(TestHarness, { attachTo: document.body })
+
+		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
+		await nextTick()
+		expect(document.body.style.position).toBe('fixed')
+
+		wrapper.unmount()
+
+		expect(document.body.style.position).toBe('relative')
+		expect(document.body.style.top).toBe('3px')
+		expect(document.body.style.left).toBe('4px')
+		expect(document.body.style.right).toBe('5px')
+		expect(document.body.style.height).toBe('6px')
+	})
+
 	it('restores the locked window scroll if iOS moves the root viewport', async () => {
 		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
 			callback(0)
@@ -383,6 +414,21 @@ describe('useDrawerScrollLock', () => {
 		wrapper.unmount()
 	})
 
+	it('does not prevent native select touchend events', async () => {
+		const wrapper = mount(TestHarness, { attachTo: document.body })
+		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
+		await nextTick()
+
+		const select = wrapper.get('.native-select').element as HTMLSelectElement
+
+		const touchEndEvent = createTouchEvent('touchend', 40, 80)
+		select.dispatchEvent(touchEndEvent)
+
+		expect(touchEndEvent.defaultPrevented).toBe(false)
+
+		wrapper.unmount()
+	})
+
 	it('does not prevent horizontal pan gestures inside horizontal scrollers', async () => {
 		const wrapper = mount(TestHarness)
 		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
@@ -441,6 +487,51 @@ describe('useDrawerScrollLock', () => {
 		wrapper.unmount()
 	})
 
+	it('detects an unmarked scrollable body as the vertical scroller, even when touched directly', async () => {
+		const wrapper = mount(TestHarness, { attachTo: document.body })
+		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
+		await nextTick()
+
+		const plainScroll = wrapper.get('.plain-y-scroll').element as HTMLDivElement
+		Object.defineProperty(plainScroll, 'scrollHeight', { configurable: true, value: 420 })
+		Object.defineProperty(plainScroll, 'clientHeight', { configurable: true, value: 160 })
+		Object.defineProperty(plainScroll, 'scrollTop', { configurable: true, value: 80, writable: true })
+
+		// Touch lands on the scroll container itself (its padding/gaps), not a child.
+		// No data-drawer-scroll-axis attribute: computed overflow + scroll room must
+		// be enough for the guard to let it scroll instead of blocking the touch.
+		plainScroll.dispatchEvent(createTouchEvent('touchstart', 40, 120))
+		const moveEvent = createTouchEvent('touchmove', 40, 84)
+		plainScroll.dispatchEvent(moveEvent)
+
+		expect(moveEvent.defaultPrevented).toBe(false)
+
+		wrapper.unmount()
+	})
+
+	it('walks past unmarked overflow:auto wrappers that have no scroll room', async () => {
+		const wrapper = mount(TestHarness, { attachTo: document.body })
+		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
+		await nextTick()
+
+		const emptyScroll = wrapper.get('.empty-y-scroll').element as HTMLDivElement
+		const emptyScrollChild = wrapper.get('.empty-y-scroll-child').element as HTMLDivElement
+		Object.defineProperty(emptyScroll, 'scrollHeight', { configurable: true, value: 120 })
+		Object.defineProperty(emptyScroll, 'clientHeight', { configurable: true, value: 120 })
+		Object.defineProperty(emptyScroll, 'scrollTop', { configurable: true, value: 0, writable: true })
+
+		// overflow-y:auto but no overflowing content and no attribute: it is not a
+		// real scroller, so detection falls through to the document and the guard
+		// prevents the touch from chaining into viewport scroll.
+		emptyScrollChild.dispatchEvent(createTouchEvent('touchstart', 40, 120))
+		const moveEvent = createTouchEvent('touchmove', 40, 84)
+		emptyScrollChild.dispatchEvent(moveEvent)
+
+		expect(moveEvent.defaultPrevented).toBe(true)
+
+		wrapper.unmount()
+	})
+
 	it('does not prevent touchmove inside no-drag controls', async () => {
 		const wrapper = mount(TestHarness)
 		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
@@ -454,6 +545,34 @@ describe('useDrawerScrollLock', () => {
 
 		expect(moveEvent.defaultPrevented).toBe(false)
 
+		wrapper.unmount()
+	})
+
+	it('allows scrolling inside drawer branch portals', async () => {
+		const wrapper = mount(TestHarness)
+		;(wrapper.vm as unknown as { setOpen: (value: boolean) => void }).setOpen(true)
+		await nextTick()
+
+		const branch = document.createElement('div')
+		branch.setAttribute('data-drawer-branch', '')
+		const branchScroll = document.createElement('div')
+		branchScroll.style.overflowY = 'auto'
+		const branchChild = document.createElement('div')
+		branchScroll.appendChild(branchChild)
+		branch.appendChild(branchScroll)
+		document.body.appendChild(branch)
+
+		Object.defineProperty(branchScroll, 'scrollHeight', { configurable: true, value: 420 })
+		Object.defineProperty(branchScroll, 'clientHeight', { configurable: true, value: 160 })
+		Object.defineProperty(branchScroll, 'scrollTop', { configurable: true, value: 80, writable: true })
+
+		branchChild.dispatchEvent(createTouchEvent('touchstart', 40, 120))
+		const moveEvent = createTouchEvent('touchmove', 40, 84)
+		branchChild.dispatchEvent(moveEvent)
+
+		expect(moveEvent.defaultPrevented).toBe(false)
+
+		branch.remove()
 		wrapper.unmount()
 	})
 

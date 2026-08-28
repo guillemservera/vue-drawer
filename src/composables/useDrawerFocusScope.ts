@@ -1,5 +1,7 @@
 import { nextTick, onBeforeUnmount, watch } from 'vue'
 import type { Ref } from 'vue'
+import { focusWithDrawerMarker } from '../utils/drawerDom'
+import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
 
 interface UseDrawerFocusScopeOptions {
 	contentElement: Ref<HTMLElement | null>
@@ -41,11 +43,16 @@ export function useDrawerFocusScope(options: UseDrawerFocusScopeOptions) {
 		previouslyFocusedElement = activeElement instanceof HTMLElement ? activeElement : null
 	}
 
-	function focusElement(element: HTMLElement | null) {
-		if (!element || document.activeElement === element) return
+	function focusElement(element: HTMLElement | null, suppressFocusRing = false) {
+		if (!element) return
+		if (document.activeElement === element) {
+			if (suppressFocusRing) focusWithDrawerMarker(element)
+			return
+		}
 
 		isRestoringFocus = true
-		element.focus({ preventScroll: true })
+		if (suppressFocusRing) focusWithDrawerMarker(element)
+		else element.focus({ preventScroll: true })
 		queueMicrotask(() => {
 			isRestoringFocus = false
 		})
@@ -82,6 +89,7 @@ export function useDrawerFocusScope(options: UseDrawerFocusScopeOptions) {
 			if (!enabled.value) return
 			const activeElement = document.activeElement
 			if (activeElement instanceof HTMLElement && container.contains(activeElement)) return
+			if (isElementInsideDrawerBranch(activeElement)) return
 
 			focusLastKnownOrFirst(container)
 		})
@@ -97,6 +105,7 @@ export function useDrawerFocusScope(options: UseDrawerFocusScopeOptions) {
 				lastFocusedElement = target
 				return
 			}
+			if (isElementInsideDrawerBranch(target)) return
 
 			requestFocusInside(container)
 		}
@@ -106,6 +115,7 @@ export function useDrawerFocusScope(options: UseDrawerFocusScopeOptions) {
 			const relatedTarget = event.relatedTarget
 			if (relatedTarget === null) return
 			if (relatedTarget instanceof HTMLElement && container.contains(relatedTarget)) return
+			if (isElementInsideDrawerBranch(relatedTarget)) return
 
 			requestFocusInside(container)
 		}
@@ -185,7 +195,7 @@ export function useDrawerFocusScope(options: UseDrawerFocusScopeOptions) {
 		isRestoringFocus = false
 
 		if (event.defaultPrevented || !shouldRestoreFocus.value) return
-		focusElement(target)
+		focusElement(target, true)
 	}
 
 	watch(contentElement, (container, _previousContainer, onCleanup) => {

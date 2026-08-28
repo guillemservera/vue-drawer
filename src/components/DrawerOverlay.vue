@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import { useDrawerRootContext } from '../utils/drawerContext'
+import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
 
 defineOptions({
 	inheritAttrs: false,
@@ -19,7 +20,6 @@ const leaveActiveClass = computed(() => {
 	}
 	return classes.join(' ')
 })
-const overlayPointerId = ref<number | null>(null)
 
 function assignOverlayRef(el: unknown) {
 	if (!el) {
@@ -31,30 +31,12 @@ function assignOverlayRef(el: unknown) {
 
 function handleOverlayPointerDown(event: PointerEvent) {
 	if (event.target !== event.currentTarget) return
-	if (!root.modal.value) return
 	root.handleDismissAttempt(event)
-	if (event.defaultPrevented || !root.dismissible.value) return
-	overlayPointerId.value = event.pointerId ?? -1
+	if (event.defaultPrevented || !root.modal.value || !root.dismissible.value) return
 	event.stopPropagation()
 	event.preventDefault()
-}
-
-function handleOverlayPointerUp(event: PointerEvent) {
-	if (event.target !== event.currentTarget) return
-	const pointerId = event.pointerId ?? -1
-	if (overlayPointerId.value !== pointerId) return
-
-	overlayPointerId.value = null
-	event.stopPropagation()
-	event.preventDefault()
+	suppressNextClickAfterPointerDismiss()
 	root.requestOpenChange(false)
-}
-
-function handleOverlayPointerCancel(event: PointerEvent) {
-	const pointerId = event.pointerId ?? -1
-	if (overlayPointerId.value === pointerId) {
-		overlayPointerId.value = null
-	}
 }
 </script>
 
@@ -80,8 +62,6 @@ function handleOverlayPointerCancel(event: PointerEvent) {
 			:data-close-animation="closeAnimation"
 			:class="['drawer-overlay', { 'drawer-overlay--non-modal': !root.modal.value }]"
 			@pointerdown="handleOverlayPointerDown"
-			@pointerup="handleOverlayPointerUp"
-			@pointercancel="handleOverlayPointerCancel"
 		/>
 	</Transition>
 </template>

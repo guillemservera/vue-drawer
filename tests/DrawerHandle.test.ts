@@ -49,6 +49,32 @@ const Harness = defineComponent({
 	`,
 })
 
+function createPointerEvent(type: string, pointerId: number, pageY: number) {
+	const event = new PointerEvent(type, {
+		bubbles: true,
+		cancelable: true,
+		clientX: 0,
+		clientY: pageY,
+	})
+
+	Object.defineProperties(event, {
+		pageY: {
+			configurable: true,
+			value: pageY,
+		},
+		pointerId: {
+			configurable: true,
+			value: pointerId,
+		},
+		pointerType: {
+			configurable: true,
+			value: 'mouse',
+		},
+	})
+
+	return event
+}
+
 describe('DrawerHandle', () => {
 	beforeEach(() => {
 		vi.useFakeTimers()
@@ -125,6 +151,44 @@ describe('DrawerHandle', () => {
 		await nextTick()
 
 		expect((wrapper.vm as unknown as { activeSnapPoint: DrawerSnapPoint | null }).activeSnapPoint).toBe('80px')
+
+		wrapper.unmount()
+	})
+
+	it('closes from a desktop handle drag', async () => {
+		const wrapper = await mountHarness()
+		const content = wrapper.get('[data-drawer-content]').element as HTMLElement
+		const handle = wrapper.get('[data-drawer-handle]').element as HTMLElement
+
+		Object.defineProperties(content, {
+			getBoundingClientRect: {
+				configurable: true,
+				value: () => ({
+					bottom: 640,
+					height: 640,
+					left: 0,
+					right: 360,
+					top: 0,
+					width: 360,
+					x: 0,
+					y: 0,
+					toJSON: () => ({}),
+				}),
+			},
+			offsetHeight: {
+				configurable: true,
+				value: 640,
+			},
+		})
+
+		vi.advanceTimersByTime(600)
+
+		handle.dispatchEvent(createPointerEvent('pointerdown', 1, 0))
+		handle.dispatchEvent(createPointerEvent('pointermove', 1, 120))
+		handle.dispatchEvent(createPointerEvent('pointerup', 1, 120))
+		await nextTick()
+
+		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(false)
 
 		wrapper.unmount()
 	})

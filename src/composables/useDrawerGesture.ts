@@ -44,6 +44,8 @@ interface UseDrawerGestureOptions {
 	getRestingOverlayOpacity: () => number
 	animateToSnapPoint: (index: number) => void
 	resetInteractiveState: () => void
+	onNestedDrag: (closeProgress: number) => void
+	onNestedRelease: (isStillOpen: boolean) => void
 }
 
 export function useDrawerGesture(options: UseDrawerGestureOptions) {
@@ -77,6 +79,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		getRestingOverlayOpacity,
 		animateToSnapPoint,
 		resetInteractiveState,
+		onNestedDrag,
+		onNestedRelease,
 	} = options
 
 	const pointerId = ref<number | null>(null)
@@ -242,6 +246,13 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	}
 
 	function shouldIgnoreTarget(target: EventTarget | null) {
+		// Only explicit no-drag zones — and native SELECT, which opens its own OS
+		// picker — suppress the swipe. Interactive content (buttons, links, list
+		// rows) must NOT block it: side sheets/nav sidebars are swiped edge-to-edge,
+		// and vertical bottom sheets rely on the scroll-position guard in
+		// shouldAllowDrag (a drag only starts when the scroll body is at the top).
+		// Blanket-blocking every interactive element was the regression that killed
+		// drag-to-dismiss on drawers with a scrollable body.
 		if (!(target instanceof HTMLElement)) return false
 		if (target.tagName === 'SELECT') return true
 		return Boolean(target.closest('[data-drawer-no-drag], [data-vaul-no-drag]'))
@@ -322,6 +333,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 				: `${1 - closeProgress}`
 		}
 
+		onNestedDrag(closeProgress)
 	}
 
 	function clearInlineStyles(options: {
@@ -402,6 +414,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			clearInlineStyles()
 			resetInteractiveState()
 		})
+
+		onNestedRelease(true)
 	}
 
 	function animateCloseFromGesture() {
@@ -428,6 +442,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			overlay.style.transition = getOverlayTransition({ close: true })
 			overlay.style.opacity = '0'
 		}
+
+		onNestedRelease(false)
 
 		waitForDrawerTransition(content, 'transform', () => {
 			if (transitionVersion !== closeTransitionVersion) {
@@ -489,6 +505,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			else if (target.index >= 0) {
 				emitRelease(event, true)
 				animateToSnapPoint(target.index)
+				onNestedRelease(true)
 			}
 			else {
 				emitRelease(event, true)
@@ -594,6 +611,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			// Match Vaul's scroll handoff: a gesture that starts while inner content
 			// is scrolling can become a drawer drag later in the same touch sequence.
 			isAllowedToDrag.value = true
+			window.getSelection()?.removeAllRanges()
 		}
 
 		if (event.cancelable) {
