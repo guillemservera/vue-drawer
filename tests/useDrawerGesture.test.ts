@@ -106,6 +106,7 @@ describe('useDrawerGesture', () => {
 				const requestOpenChange = vi.fn((value: boolean) => {
 					open.value = value
 				})
+				const getVisibleDrawerSize = vi.fn(() => 320)
 
 				const gesture = useDrawerGesture({
 					open,
@@ -137,7 +138,7 @@ describe('useDrawerGesture', () => {
 						emitRelease: vi.fn(),
 						getContentTransition: () => 'transform 420ms ease',
 					getOverlayTransition: () => 'opacity 420ms ease',
-					getVisibleDrawerSize: () => 320,
+					getVisibleDrawerSize,
 					getSnapPointBaseSize: () => 640,
 					getSnapPointsOffset: () => [],
 					getRestingOffset: () => 0,
@@ -156,6 +157,7 @@ describe('useDrawerGesture', () => {
 					open,
 					preventCloseAutoFocusOnce,
 					requestOpenChange,
+					getVisibleDrawerSize,
 					setOpen(value: boolean) {
 						open.value = value
 					},
@@ -175,15 +177,20 @@ describe('useDrawerGesture', () => {
 			open: { value: boolean }
 			preventCloseAutoFocusOnce: { value: boolean }
 			requestOpenChange: ReturnType<typeof vi.fn>
+			getVisibleDrawerSize: ReturnType<typeof vi.fn>
 			setOpen: (value: boolean) => void
 			skipCloseAnimation: { value: boolean }
 		}
 
 		exposed.gesture.handlePointerDown(createPointerEvent('pointerdown', exposed.content, 1, 0))
+		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.content, 1, 40))
+		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.content, 1, -40))
+		expect(exposed.content.style.transform).toContain('translate3d(0, -')
 		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.content, 1, 140))
 		exposed.gesture.handlePointerUp(createPointerEvent('pointerup', exposed.content, 1, 140))
 
 		expect(exposed.requestOpenChange).toHaveBeenCalledWith(false)
+		expect(exposed.getVisibleDrawerSize).toHaveBeenCalledTimes(1)
 		expect(exposed.skipCloseAnimation.value).toBe(true)
 		expect(exposed.gestureClosing.value).toBe(false)
 		expect(exposed.preventCloseAutoFocusOnce.value).toBe(true)

@@ -278,9 +278,9 @@ function getSnapPointBaseSize() {
 	return Math.max(viewportSize || getVisibleDrawerSize(), 1)
 }
 
-function getSnapPointsOffset() {
+function getSnapPointsOffset(baseSize = getSnapPointBaseSize()) {
 	if (!props.snapPoints?.length) return []
-	return getSnapPointOffsets(getSnapPointBaseSize(), props.snapPoints)
+	return getSnapPointOffsets(baseSize, props.snapPoints)
 }
 
 function getRestingOffset() {

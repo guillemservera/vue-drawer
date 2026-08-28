@@ -124,7 +124,7 @@ export interface DrawerRootContext {
 	emitRelease: (pointerEvent: PointerEvent, open: boolean) => void
 	getVisibleDrawerSize: () => number
 	getSnapPointBaseSize: () => number
-	getSnapPointsOffset: () => number[]
+	getSnapPointsOffset: (baseSize?: number) => number[]
 	getRestingOffset: () => number
 	getRestingOverlayOpacity: () => number
 	syncRestingStyles: (options?: { overlayOpacity?: number, restingOffset?: number }) => void

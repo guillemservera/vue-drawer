@@ -2,11 +2,11 @@
 .drawer-overlay {
 	--drawer-edge-overlap: 1px;
 	--drawer-offscreen-offset: 24px;
-	--drawer-duration: 420ms;
-	--drawer-duration-ms: 420;
+	--drawer-duration: 500ms;
+	--drawer-duration-ms: 500;
 	--drawer-ease: cubic-bezier(0.32, 0.72, 0, 1);
-	--drawer-close-duration: 260ms;
-	--drawer-close-duration-ms: 260;
+	--drawer-close-duration: 500ms;
+	--drawer-close-duration-ms: 500;
 	--drawer-close-ease: var(--drawer-ease);
 	--drawer-fade-enter-duration: 260ms;
 	--drawer-fade-leave-duration: 180ms;
@@ -30,10 +30,11 @@
 	touch-action: none;
 }
 
-.drawer-content[data-state='open'],
 .drawer-overlay[data-state='open'] {
 	pointer-events: auto;
 }
+
+/* Keep drawer content inherited so nested modal layers can make it inert. */
 
 .drawer-content[data-modal='true'] {
 	overscroll-behavior: contain;
@@ -125,15 +126,15 @@
 }
 
 .drawer-content-enter-active {
-	transition: transform var(--drawer-duration, 420ms) var(--drawer-ease);
+	transition: transform var(--drawer-duration, 500ms) var(--drawer-ease);
 }
 
 .drawer-content-leave-active {
-	transition: transform var(--drawer-close-duration, 260ms) var(--drawer-close-ease, var(--drawer-ease));
+	transition: transform var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
 }
 
 .drawer-content-leave-active--slide {
-	transition: transform var(--drawer-close-duration, 260ms) var(--drawer-close-ease, var(--drawer-ease));
+	transition: transform var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
 }
 
 .drawer-content-leave-active--instant {
@@ -275,12 +276,6 @@
 }
 
 .drawer-overlay {
-	--drawer-duration: 180ms;
-	--drawer-duration-ms: 180;
-	--drawer-ease: ease-out;
-	--drawer-close-duration: 140ms;
-	--drawer-close-duration-ms: 140;
-	--drawer-close-ease: ease-in;
 	will-change: opacity;
 	opacity: var(--drawer-rest-overlay-opacity, 1);
 	touch-action: none;
@@ -292,11 +287,11 @@
 }
 
 .drawer-overlay-enter-active {
-	transition: opacity var(--drawer-duration, 420ms) var(--drawer-ease);
+	transition: opacity var(--drawer-duration, 500ms) var(--drawer-ease);
 }
 
 .drawer-overlay-leave-active {
-	transition: opacity var(--drawer-close-duration, 260ms) var(--drawer-close-ease, var(--drawer-ease));
+	transition: opacity var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
 }
 
 .drawer-overlay[data-close-animation='fade'].drawer-overlay-leave-active,

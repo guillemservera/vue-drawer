@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { mount } from '@vue/test-utils'
 import { defineComponent, nextTick, ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
@@ -54,6 +56,12 @@ const ClassHarness = defineComponent({
 })
 
 describe('DrawerOverlay', () => {
+	it('keeps open content inheriting pointer-events for nested modal layers', () => {
+		const css = readFileSync(join(process.cwd(), 'src/styles/drawer.css'), 'utf8')
+		expect(css).toMatch(/\.drawer-overlay\[data-state='open'\] \{\s*pointer-events: auto;/u)
+		expect(css).not.toMatch(/\.drawer-content\[data-state='open'\][\s\S]{0,80}pointer-events: auto;/u)
+	})
+
 	it('preserves consumer classes while adding overlay behavior classes', async () => {
 		const wrapper = mount(ClassHarness, {
 			global: {

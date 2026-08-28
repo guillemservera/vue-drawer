@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
 import {
 	DRAWER_DRAG_ACTIVATION_PX,
 	DRAWER_VELOCITY_THRESHOLD,
+	dampenValue,
 	getAxisDistance,
 	getCloseDirectionSign,
 	getClosedTransform,
@@ -39,7 +40,7 @@ interface UseDrawerGestureOptions {
 	getOverlayTransition: (options?: { instant?: boolean, close?: boolean }) => string
 	getVisibleDrawerSize: () => number
 	getSnapPointBaseSize: () => number
-	getSnapPointsOffset: () => number[]
+	getSnapPointsOffset: (baseSize?: number) => number[]
 	getRestingOffset: () => number
 	getRestingOverlayOpacity: () => number
 	animateToSnapPoint: (index: number) => void
@@ -99,6 +100,16 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	const touchEndFallbackTimer = ref<number | null>(null)
 	const removeWindowGestureListeners = ref<(() => void) | null>(null)
 	let closeTransitionVersion = 0
+	let gestureDrawerSize = 1
+	let gestureSnapPointsOffset: number[] = []
+
+	function cacheGestureMetrics() {
+		const drawerSize = hasSnapPoints.value ? getSnapPointBaseSize() : getVisibleDrawerSize()
+		gestureDrawerSize = Math.max(drawerSize, 1)
+		gestureSnapPointsOffset = hasSnapPoints.value
+			? getSnapPointsOffset(gestureDrawerSize)
+			: []
+	}
 
 	function clearTouchEndFallback() {
 		if (touchEndFallbackTimer.value === null || typeof window === 'undefined') return
@@ -140,6 +151,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		isDragging.value = false
 		dragBaseOffset.value = 0
 		currentOffset.value = 0
+		gestureDrawerSize = 1
+		gestureSnapPointsOffset = []
 		releaseCapturedPointer(captureElement, capturedPointerId)
 	}
 
@@ -287,7 +300,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		}
 
 		if (closeDistance <= 0) {
-			const canExpandSnapPoint = hasSnapPoints.value && activeSnapPointIndex.value < getSnapPointsOffset().length - 1
+			const canExpandSnapPoint = hasSnapPoints.value && activeSnapPointIndex.value < gestureSnapPointsOffset.length - 1
 			if (!canExpandSnapPoint) {
 				lastPreventedDragAt.value = now
 				return false
@@ -315,12 +328,11 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		return true
 	}
 
-	function setDraggingStyles(offset: number) {
+	function setDraggingStyles(offset: number, drawerSize: number, snapPointsOffset: number[]) {
 		const content = contentElement.value
 		if (!content) return
 
 		const overlay = overlayElement.value
-		const drawerSize = hasSnapPoints.value ? getSnapPointBaseSize() : getVisibleDrawerSize()
 		const closeProgress = Math.min(Math.max(offset, 0) / drawerSize, 1)
 
 		content.style.transition = 'none'
@@ -329,7 +341,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		if (overlay) {
 			overlay.style.transition = 'none'
 			overlay.style.opacity = hasSnapPoints.value
-				? `${getOverlayOpacityForOffset(offset, getSnapPointsOffset(), fadeFromIndex.value)}`
+				? `${getOverlayOpacityForOffset(offset, snapPointsOffset, fadeFromIndex.value)}`
 				: `${1 - closeProgress}`
 		}
 
@@ -478,10 +490,10 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		const closeDistance = rawDistance * getCloseDirectionSign(direction.value)
 		const elapsed = Math.max(performance.now() - pointerStartTime.value, 1)
 		const velocity = closeDistance / elapsed
-		const drawerSize = hasSnapPoints.value ? getSnapPointBaseSize() : getVisibleDrawerSize()
+		const drawerSize = gestureDrawerSize
 
 		if (hasSnapPoints.value) {
-			const snapPointsOffset = getSnapPointsOffset()
+			const snapPointsOffset = gestureSnapPointsOffset
 			const minOffset = snapPointsOffset[snapPointsOffset.length - 1] ?? 0
 			const maxOffset = dismissible.value ? drawerSize : (snapPointsOffset[0] ?? 0)
 			const resolvedOffset = clamp(dragBaseOffset.value + closeDistance, minOffset, maxOffset)
@@ -548,7 +560,10 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		pointerStartPosition.value = getPointerPagePosition(event)
 		pointerStart.value = getAxisDistance(event, direction.value)
 		pointerStartTime.value = performance.now()
-		dragBaseOffset.value = getRestingOffset()
+		cacheGestureMetrics()
+		dragBaseOffset.value = hasSnapPoints.value
+			? gestureSnapPointsOffset[activeSnapPointIndex.value] ?? 0
+			: 0
 		currentOffset.value = dragBaseOffset.value
 		registerWindowGestureListeners()
 
@@ -620,21 +635,24 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 
 		isDragging.value = true
 		if (hasSnapPoints.value) {
-			const snapPointsOffset = getSnapPointsOffset()
+			const snapPointsOffset = gestureSnapPointsOffset
+			const snapPointBaseSize = gestureDrawerSize
 			const minOffset = snapPointsOffset[snapPointsOffset.length - 1] ?? 0
-			const snapPointBaseSize = getSnapPointBaseSize()
 			const maxOffset = dismissible.value ? snapPointBaseSize : (snapPointsOffset[0] ?? dragBaseOffset.value)
 			const offset = clamp(dragBaseOffset.value + closeDistance, minOffset, maxOffset)
 			currentOffset.value = offset
-			setDraggingStyles(offset)
+			setDraggingStyles(offset, snapPointBaseSize, snapPointsOffset)
 			emitDrag(event, Math.min(Math.max(offset, 0) / snapPointBaseSize, 1))
 			return
 		}
 
-		const offset = Math.max(closeDistance, 0)
+		const drawerSize = gestureDrawerSize
+		const offset = closeDistance >= 0
+			? closeDistance
+			: -Math.max(dampenValue(-closeDistance), 0)
 		currentOffset.value = offset
-		setDraggingStyles(offset)
-		emitDrag(event, Math.min(Math.max(offset, 0) / getVisibleDrawerSize(), 1))
+		setDraggingStyles(offset, drawerSize, [])
+		emitDrag(event, Math.min(Math.max(offset, 0) / drawerSize, 1))
 	}
 
 	function handlePointerUp(event: PointerEvent) {
