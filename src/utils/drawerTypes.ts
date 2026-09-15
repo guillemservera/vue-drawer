@@ -10,7 +10,7 @@ export type DrawerPointerDownOutsideEvent = CustomEvent<{ originalEvent: Pointer
 export type DrawerFocusOutsideEvent = CustomEvent<{ originalEvent: FocusEvent }>
 export type DrawerInteractOutsideEvent = DrawerPointerDownOutsideEvent | DrawerFocusOutsideEvent
 
-export interface DrawerRootProps {
+export interface DrawerProps {
 	open?: boolean
 	defaultOpen?: boolean
 	modal?: boolean
@@ -29,7 +29,7 @@ export interface DrawerRootProps {
 	 */
 	fixed?: boolean
 	/**
-	 * Controls VueDrawer's document/body scroll lock layer.
+	 * Controls the drawer's document/body scroll lock layer.
 	 * Set to false only when the host app owns scroll locking itself.
 	 */
 	preventScroll?: boolean
@@ -52,7 +52,7 @@ export interface DrawerRootProps {
 	fadeFromIndex?: number
 }
 
-export interface DrawerRootEmits {
+export interface DrawerEmits {
 	(event: 'update:open', value: boolean): void
 	(event: 'update:activeSnapPoint', value: DrawerSnapPoint | null): void
 	(event: 'after-open' | 'after-close'): void

@@ -7,7 +7,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	DrawerRoot,
+	Drawer,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
@@ -28,7 +28,7 @@ const handle = computed(() => handleClass(props.styled))
 			<p>Drag between snap points. The active snap point can be controlled with v-model.</p>
 		</div>
 
-		<DrawerRoot
+		<Drawer
 			v-model:open="open"
 			v-model:active-snap-point="activeSnapPoint"
 			:snap-points="snapPoints"
@@ -67,6 +67,6 @@ const handle = computed(() => handleClass(props.styled))
 					</div>
 				</DrawerContent>
 			</DrawerPortal>
-		</DrawerRoot>
+		</Drawer>
 	</section>
 </template>

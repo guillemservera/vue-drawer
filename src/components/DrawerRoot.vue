@@ -14,9 +14,13 @@ import {
 import { provideDrawerRootContext, useOptionalDrawerRootContext } from '../utils/drawerContext'
 import { restoreBodyPointerEvents, scheduleBodyPointerEventsRestore, waitForDrawerTransition } from '../utils/drawerDom'
 import { getActiveSnapPointIndex, getOverlayOpacityForOffset, getSnapPointOffsets } from '../utils/drawerSnapPoints'
-import type { DrawerAnimation, DrawerRootEmits, DrawerRootProps, DrawerSnapPoint } from '../utils/drawerTypes'
+import type { DrawerAnimation, DrawerEmits, DrawerProps, DrawerSnapPoint } from '../utils/drawerTypes'
 import { useDrawerInputReposition } from '../composables/useDrawerInputReposition'
 import { useDrawerScrollLock } from '../composables/useDrawerScrollLock'
+
+defineOptions({
+	name: 'Drawer',
+})
 
 let nextDrawerId = 1
 
@@ -27,7 +31,7 @@ function createDrawerId(direction: string, nested: boolean) {
 	return `${label}#${id}`
 }
 
-const props = withDefaults(defineProps<DrawerRootProps>(), {
+const props = withDefaults(defineProps<DrawerProps>(), {
 	open: undefined,
 	defaultOpen: false,
 	modal: true,
@@ -54,7 +58,7 @@ const props = withDefaults(defineProps<DrawerRootProps>(), {
 	fadeFromIndex: undefined,
 })
 
-const emit = defineEmits<DrawerRootEmits>()
+const emit = defineEmits<DrawerEmits>()
 
 const parentContext = useOptionalDrawerRootContext()
 const uncontrolledOpen = ref(props.defaultOpen)

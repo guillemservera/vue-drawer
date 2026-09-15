@@ -46,7 +46,7 @@ onBeforeUnmount(() => {
 	<main class="page">
 		<header class="header">
 			<div>
-				<p class="eyebrow">VueDrawer 0.1.0</p>
+				<p class="eyebrow">VueDrawer</p>
 				<h1>Headless drawer behavior for Vue 3</h1>
 			</div>
 

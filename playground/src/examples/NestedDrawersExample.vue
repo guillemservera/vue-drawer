@@ -7,8 +7,8 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	DrawerRoot,
-	DrawerRootNested,
+	Drawer,
+	DrawerNested,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
@@ -30,7 +30,7 @@ const handle = computed(() => handleClass(props.styled))
 			<p>Open a child drawer from inside the parent. Escape and overlay dismissal only close the top drawer.</p>
 		</div>
 
-		<DrawerRoot v-model:open="open">
+		<Drawer v-model:open="open">
 			<button class="demo-button" type="button" @click="open = true">
 				Open parent drawer
 			</button>
@@ -44,7 +44,7 @@ const handle = computed(() => handleClass(props.styled))
 						The parent remains stable while the nested drawer stacks above it.
 					</DrawerDescription>
 
-					<DrawerRootNested v-model:open="nestedOpen">
+					<DrawerNested v-model:open="nestedOpen">
 						<button class="demo-button demo-button--full" type="button" @click="nestedOpen = true">
 							Open nested drawer
 						</button>
@@ -65,9 +65,9 @@ const handle = computed(() => handleClass(props.styled))
 								</DrawerClose>
 							</DrawerContent>
 						</DrawerPortal>
-					</DrawerRootNested>
+					</DrawerNested>
 				</DrawerContent>
 			</DrawerPortal>
-		</DrawerRoot>
+		</Drawer>
 	</section>
 </template>

@@ -2,6 +2,7 @@
 import DrawerRoot from './DrawerRoot.vue'
 
 defineOptions({
+	name: 'DrawerNested',
 	inheritAttrs: false,
 })
 </script>

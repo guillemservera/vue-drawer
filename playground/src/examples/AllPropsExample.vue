@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { DrawerAnimation, DrawerDirection, DrawerRootProps, DrawerSnapPoint } from '@guillemservera/vue-drawer'
+import type { DrawerAnimation, DrawerDirection, DrawerProps, DrawerSnapPoint } from '@guillemservera/vue-drawer'
 import {
 	DrawerContent,
 	DrawerDescription,
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	DrawerRoot,
-	DrawerRootNested,
+	Drawer,
+	DrawerNested,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, fadeTimingStyle, handleClass, overlayClass } from './demoClasses'
@@ -79,8 +79,8 @@ const resolvedFadeFromIndex = computed(() => {
 	if (!points?.length || fadeFromIndex.value < 0) return undefined
 	return Math.min(fadeFromIndex.value, points.length - 1)
 })
-const rootProps = computed<DrawerRootProps>(() => {
-	const config: DrawerRootProps = {
+const rootProps = computed<DrawerProps>(() => {
+	const config: DrawerProps = {
 		modal: modal.value,
 		dismissible: dismissible.value,
 		instantClose: instantClose.value,
@@ -242,7 +242,7 @@ function formatSnapPoint(snapPoint: DrawerSnapPoint | null) {
 	<section class="demo-stack">
 		<div class="demo-copy">
 			<h2>Props lab</h2>
-			<p>Control every DrawerRoot option from one place, including controlled state, snap points, dismissal and nested behavior.</p>
+			<p>Control every Drawer option from one place, including controlled state, snap points, dismissal and nested behavior.</p>
 		</div>
 
 		<div class="props-lab">
@@ -440,13 +440,13 @@ function formatSnapPoint(snapPoint: DrawerSnapPoint | null) {
 					<legend>Nested</legend>
 					<label class="demo-toggle">
 						<input v-model="nestedEnabled" type="checkbox">
-						<span>DrawerRootNested</span>
+						<span>DrawerNested</span>
 					</label>
 				</fieldset>
 			</form>
 
 			<div class="props-preview">
-				<DrawerRoot
+				<Drawer
 					:key="drawerKey"
 					v-bind="rootProps"
 					@update:open="handleOpenUpdate"
@@ -558,7 +558,7 @@ function formatSnapPoint(snapPoint: DrawerSnapPoint | null) {
 								</p>
 							</div>
 
-							<DrawerRootNested
+							<DrawerNested
 								v-if="nestedEnabled"
 								v-model:open="nestedOpen"
 								:direction="direction"
@@ -582,14 +582,14 @@ function formatSnapPoint(snapPoint: DrawerSnapPoint | null) {
 										</button>
 									</DrawerContent>
 								</DrawerPortal>
-							</DrawerRootNested>
+							</DrawerNested>
 
 							<button class="demo-button demo-button--full" type="button" @click="closeDrawer">
 								Close drawer
 							</button>
 						</DrawerContent>
 					</DrawerPortal>
-				</DrawerRoot>
+				</Drawer>
 			</div>
 		</div>
 	</section>

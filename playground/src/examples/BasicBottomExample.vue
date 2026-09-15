@@ -8,7 +8,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	DrawerRoot,
+	Drawer,
 	DrawerTitle,
 	DrawerTrigger,
 } from '@guillemservera/vue-drawer'
@@ -55,7 +55,7 @@ const handle = computed(() => handleClass(props.styled))
 			</button>
 		</div>
 
-		<DrawerRoot v-model:open="open" :animation="animation" :close-animation="closeAnimation">
+		<Drawer v-model:open="open" :animation="animation" :close-animation="closeAnimation">
 				<DrawerTrigger class="demo-button">
 					Open bottom drawer
 				</DrawerTrigger>
@@ -80,6 +80,6 @@ const handle = computed(() => handleClass(props.styled))
 						</DrawerClose>
 				</DrawerContent>
 			</DrawerPortal>
-		</DrawerRoot>
+		</Drawer>
 	</section>
 </template>

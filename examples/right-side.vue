@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { DrawerClose, DrawerContent, DrawerOverlay, DrawerPortal, DrawerRoot, DrawerTitle, DrawerTrigger } from '@guillemservera/vue-drawer'
+import { Drawer, DrawerClose, DrawerContent, DrawerOverlay, DrawerPortal, DrawerTitle, DrawerTrigger } from '@guillemservera/vue-drawer'
 
 const open = ref(false)
 </script>
 
 	<template>
-		<DrawerRoot v-model:open="open" direction="right">
+		<Drawer v-model:open="open" direction="right">
 			<DrawerTrigger>
 				Open side drawer
 			</DrawerTrigger>
@@ -20,5 +20,5 @@ const open = ref(false)
 					</DrawerClose>
 				</DrawerContent>
 		</DrawerPortal>
-	</DrawerRoot>
+		</Drawer>
 </template>

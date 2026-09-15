@@ -6,8 +6,8 @@ import DrawerDescription from './components/DrawerDescription.vue'
 import DrawerHandle from './components/DrawerHandle.vue'
 import DrawerOverlay from './components/DrawerOverlay.vue'
 import DrawerPortal from './components/DrawerPortal.vue'
-import DrawerRoot from './components/DrawerRoot.vue'
-import DrawerRootNested from './components/DrawerRootNested.vue'
+import Drawer from './components/DrawerRoot.vue'
+import DrawerNested from './components/DrawerRootNested.vue'
 import DrawerTitle from './components/DrawerTitle.vue'
 import DrawerTrigger from './components/DrawerTrigger.vue'
 
@@ -23,8 +23,8 @@ export type {
 	DrawerPortalTarget,
 	DrawerPrimitiveAs,
 	DrawerPointerDownOutsideEvent,
-	DrawerRootEmits,
-	DrawerRootProps,
+	DrawerEmits,
+	DrawerProps,
 	DrawerSnapPoint,
 	DrawerTriggerProps,
 } from './utils/drawerTypes'
@@ -36,8 +36,8 @@ export {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	DrawerRoot,
-	DrawerRootNested,
+	Drawer,
+	DrawerNested,
 	DrawerTitle,
 	DrawerTrigger,
 }

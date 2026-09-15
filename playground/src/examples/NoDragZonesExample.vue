@@ -6,7 +6,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	DrawerRoot,
+	Drawer,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
@@ -26,7 +26,7 @@ const handle = computed(() => handleClass(props.styled))
 			<p>Use data-drawer-no-drag or data-vaul-no-drag for controls that own their pointer gestures.</p>
 		</div>
 
-		<DrawerRoot v-model:open="open">
+		<Drawer v-model:open="open">
 			<button class="demo-button" type="button" @click="open = true">
 				Open no-drag demo
 			</button>
@@ -52,6 +52,6 @@ const handle = computed(() => handleClass(props.styled))
 					</div>
 				</DrawerContent>
 			</DrawerPortal>
-		</DrawerRoot>
+		</Drawer>
 	</section>
 </template>

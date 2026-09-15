@@ -27,7 +27,7 @@ Zero runtime dependencies. Vue is the only peer dependency. VueDrawer is ESM-onl
 import { ref } from 'vue'
 import '@guillemservera/vue-drawer/style.css'
 import {
-  DrawerRoot,
+  Drawer,
   DrawerTrigger,
   DrawerPortal,
   DrawerOverlay,
@@ -42,7 +42,7 @@ const open = ref(false)
 </script>
 
 <template>
-  <DrawerRoot v-model:open="open">
+  <Drawer v-model:open="open">
     <DrawerTrigger>Open drawer</DrawerTrigger>
 
     <DrawerPortal>
@@ -55,7 +55,7 @@ const open = ref(false)
         <DrawerClose>Close</DrawerClose>
       </DrawerContent>
     </DrawerPortal>
-  </DrawerRoot>
+  </Drawer>
 </template>
 ```
 
@@ -84,8 +84,8 @@ VueDrawer ships only the functional CSS required for transforms, transitions, to
 
 ```ts
 import {
-  DrawerRoot,
-  DrawerRootNested,
+  Drawer,
+  DrawerNested,
   DrawerTrigger,
   DrawerClose,
   DrawerPortal,
@@ -97,9 +97,9 @@ import {
 } from '@guillemservera/vue-drawer'
 ```
 
-`DrawerRoot` owns state and behavior. `DrawerPortal` teleports overlay/content to `body` by default. `DrawerOverlay` is optional and visual; outside dismissal is handled by the internal dismiss layer so consumers can style, omit or replace the overlay. `DrawerContent` is the dialog surface. `DrawerHandle` cycles snap points on click and owns handle-only gestures when `handleOnly` is enabled. `DrawerClose` closes the current root by default and can close the full nested stack with `scope="all"`. `DrawerTitle` and `DrawerDescription` register accessible IDs for `DrawerContent`.
+`Drawer` owns state and behavior. `DrawerPortal` teleports overlay/content to `body` by default. `DrawerOverlay` is optional and visual; outside dismissal is handled by the internal dismiss layer so consumers can style, omit or replace the overlay. `DrawerContent` is the dialog surface. `DrawerHandle` cycles snap points on click and owns handle-only gestures when `handleOnly` is enabled. `DrawerClose` closes the current drawer by default and can close the full nested stack with `scope="all"`. `DrawerTitle` and `DrawerDescription` register accessible IDs for `DrawerContent`.
 
-### Root Props
+### Drawer Props
 
 | Prop | Type | Default |
 | --- | --- | --- |
@@ -128,7 +128,7 @@ import {
 | `defaultSnapPoint` | `number \| string \| null` | `null` |
 | `fadeFromIndex` | `number` | last snap point |
 
-Use `DrawerRootNested` instead of setting `nested` manually for nested drawers.
+Use `DrawerNested` instead of setting `nested` manually for nested drawers.
 
 ### Trigger Props
 
@@ -234,8 +234,8 @@ import type {
   DrawerInteractOutsideEvent,
   DrawerPointerDownOutsideEvent,
   DrawerPrimitiveAs,
-  DrawerRootProps,
-  DrawerRootEmits,
+  DrawerProps,
+  DrawerEmits,
   DrawerSnapPoint,
   DrawerPortalTarget,
 } from '@guillemservera/vue-drawer'
@@ -270,14 +270,14 @@ Provide a visible `DrawerTitle` whenever possible. If your UI needs a visually h
 For `modal=false`, outside pointer and focus events are still emitted but do not close the drawer by default.
 
 ```vue
-<DrawerRoot v-model:open="open">
+<Drawer v-model:open="open">
   <DrawerPortal>
     <DrawerOverlay class="fixed inset-0 bg-black/40" />
     <DrawerContent class="fixed inset-x-0 bottom-0">
       ...
     </DrawerContent>
   </DrawerPortal>
-</DrawerRoot>
+</Drawer>
 ```
 
 To prevent outside dismissal for a specific case, use the content event:
@@ -289,9 +289,9 @@ To prevent outside dismissal for a specific case, use the content event:
 To disable all implicit dismissal, use the root prop:
 
 ```vue
-<DrawerRoot :dismissible="false" v-model:open="open">
+<Drawer :dismissible="false" v-model:open="open">
   ...
-</DrawerRoot>
+</Drawer>
 ```
 
 ## Scroll And iOS
