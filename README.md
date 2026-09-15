@@ -6,7 +6,7 @@ VueDrawer extracts the drawer behavior from a production Vue application into a 
 
 ## Status
 
-VueDrawer is an initial `0.1.0` release. The API is usable, but still expected to evolve before `1.0`.
+VueDrawer is currently in an early `0.x` release. The API is usable, but still expected to evolve before `1.0`.
 
 ## Installation
 

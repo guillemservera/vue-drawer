@@ -12,16 +12,16 @@ WebKit's fixed-container edge detection treats a full-width fixed element as vie
 
 A normal application shell sized with `100dvh` is not independently a fixed-edge candidate. It can become relevant indirectly when scroll locking changes `body` to `position: fixed`.
 
-### Archivo observations
+### Reference application observations
 
-The Archivo settings drawer originally left Safari's bottom browser controls using the page color. The original composition had:
+A production settings drawer exposed Safari's bottom browser controls using the page color. The original composition had:
 
 - a transparent fixed drawer content element;
 - the opaque surface on an inner panel;
 - an initial bottom transform beyond `100%` using the safe-area inset and a `24px` offscreen offset;
 - iOS scroll locking that fixes `body`.
 
-Applying the surface directly to the fixed content and using `min(82dvh, 720px)` colors Safari correctly. The height is an application-level workaround currently verified in Archivo, not a general VueDrawer requirement.
+Applying the surface directly to the fixed content and using `min(82dvh, 720px)` colors Safari correctly. The height is an application-level workaround verified in one consumer, not a general VueDrawer requirement.
 
 A masked fixed `12px` color sampler also worked, but it was delayed and imposed presentation behavior, so it was removed.
 
