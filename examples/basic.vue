@@ -7,7 +7,7 @@ import { ref } from 'vue'
 		DrawerHandle,
 	DrawerOverlay,
 		DrawerPortal,
-		Drawer,
+		DrawerRoot,
 		DrawerTitle,
 		DrawerTrigger,
 	} from '@guillemservera/vue-drawer'
@@ -16,7 +16,7 @@ const open = ref(false)
 </script>
 
 	<template>
-		<Drawer v-model:open="open">
+		<DrawerRoot v-model:open="open">
 			<DrawerTrigger>
 				Open drawer
 			</DrawerTrigger>
@@ -34,5 +34,5 @@ const open = ref(false)
 					</DrawerClose>
 				</DrawerContent>
 		</DrawerPortal>
-	</Drawer>
+	</DrawerRoot>
 </template>

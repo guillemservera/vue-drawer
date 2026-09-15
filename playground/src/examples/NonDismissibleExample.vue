@@ -6,7 +6,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	Drawer,
+	DrawerRoot,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
@@ -25,7 +25,7 @@ const handle = computed(() => handleClass(props.styled))
 			<p>Escape, outside click and drag-to-close are prevented until the app closes the controlled drawer.</p>
 		</div>
 
-		<Drawer v-model:open="open" :dismissible="false">
+		<DrawerRoot v-model:open="open" :dismissible="false">
 			<button class="demo-button" type="button" @click="open = true">
 				Open locked drawer
 			</button>
@@ -55,6 +55,6 @@ const handle = computed(() => handleClass(props.styled))
 					</button>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 	</section>
 </template>

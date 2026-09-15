@@ -6,7 +6,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	Drawer,
+	DrawerRoot,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, overlayClass } from './demoClasses'
@@ -167,7 +167,7 @@ onBeforeUnmount(() => {
 			</p>
 		</div>
 
-		<Drawer
+		<DrawerRoot
 			v-model:open="open"
 			:modal="modal"
 			:auto-focus="false"
@@ -212,6 +212,6 @@ onBeforeUnmount(() => {
 					</div>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 	</section>
 </template>
