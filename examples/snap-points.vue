@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { DrawerSnapPoint } from '@guillemservera/vue-drawer'
-import { Drawer, DrawerClose, DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal, DrawerTitle, DrawerTrigger } from '@guillemservera/vue-drawer'
+import { DrawerClose, DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal, DrawerRoot, DrawerTitle, DrawerTrigger } from '@guillemservera/vue-drawer'
 
 const open = ref(false)
 const activeSnapPoint = ref<DrawerSnapPoint | null>('160px')
@@ -9,7 +9,7 @@ const snapPoints: DrawerSnapPoint[] = ['160px', 0.55, 0.9]
 </script>
 
 <template>
-	<Drawer
+	<DrawerRoot
 		v-model:open="open"
 		v-model:active-snap-point="activeSnapPoint"
 		:snap-points="snapPoints"
@@ -31,5 +31,5 @@ const snapPoints: DrawerSnapPoint[] = ['160px', 0.55, 0.9]
 				</DrawerClose>
 			</DrawerContent>
 		</DrawerPortal>
-	</Drawer>
+	</DrawerRoot>
 </template>

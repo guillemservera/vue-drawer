@@ -5,7 +5,7 @@ import {
 	DrawerDescription,
 	DrawerHandle,
 	DrawerPortal,
-	Drawer,
+	DrawerRoot,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, handleClass } from './demoClasses'
@@ -33,7 +33,7 @@ const handle = computed(() => handleClass(props.styled))
 			</button>
 		</div>
 
-		<Drawer v-model:open="open" direction="right" :modal="false">
+		<DrawerRoot v-model:open="open" direction="right" :modal="false">
 			<DrawerPortal>
 				<DrawerContent :class="content">
 					<DrawerHandle :class="handle" />
@@ -46,6 +46,6 @@ const handle = computed(() => handleClass(props.styled))
 					</button>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 	</section>
 </template>

@@ -6,7 +6,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	Drawer,
+	DrawerRoot,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, overlayClass } from './demoClasses'
@@ -36,7 +36,7 @@ const rows = Array.from({ length: 34 }, (_, index) => index + 1)
 			</button>
 		</div>
 
-		<Drawer v-model:open="bottomOpen">
+		<DrawerRoot v-model:open="bottomOpen">
 			<DrawerPortal>
 				<DrawerOverlay :class="overlay" />
 				<DrawerContent :class="bottomContent">
@@ -55,9 +55,9 @@ const rows = Array.from({ length: 34 }, (_, index) => index + 1)
 					</div>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 
-		<Drawer v-model:open="sidebarOpen" direction="left">
+		<DrawerRoot v-model:open="sidebarOpen" direction="left">
 			<DrawerPortal>
 				<DrawerOverlay :class="overlay" />
 				<DrawerContent :class="sidebarContent">
@@ -75,6 +75,6 @@ const rows = Array.from({ length: 34 }, (_, index) => index + 1)
 					</div>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 	</section>
 </template>

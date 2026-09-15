@@ -6,7 +6,7 @@ import {
 	DrawerHandle,
 	DrawerOverlay,
 	DrawerPortal,
-	Drawer,
+	DrawerRoot,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, handleClass, overlayClass } from './demoClasses'
@@ -27,7 +27,7 @@ const handle = computed(() => handleClass(props.styled))
 			<p>Focusable controls stay trapped while modal. The form uses data-drawer-no-drag.</p>
 		</div>
 
-		<Drawer v-model:open="open">
+		<DrawerRoot v-model:open="open">
 			<button class="demo-button" type="button" @click="open = true">
 				Create alert
 			</button>
@@ -60,6 +60,6 @@ const handle = computed(() => handleClass(props.styled))
 					</form>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 	</section>
 </template>

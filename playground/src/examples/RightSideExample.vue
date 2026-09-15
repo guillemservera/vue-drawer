@@ -6,7 +6,7 @@ import {
 	DrawerDescription,
 	DrawerOverlay,
 	DrawerPortal,
-	Drawer,
+	DrawerRoot,
 	DrawerTitle,
 } from '@guillemservera/vue-drawer'
 import { contentClass, overlayClass } from './demoClasses'
@@ -105,7 +105,7 @@ function openExample(example: SideExample) {
 			</button>
 		</div>
 
-		<Drawer v-model:open="open" :direction="activeExample.direction">
+		<DrawerRoot v-model:open="open" :direction="activeExample.direction">
 			<DrawerPortal>
 				<DrawerOverlay :class="overlay" />
 				<DrawerContent :class="content">
@@ -128,6 +128,6 @@ function openExample(example: SideExample) {
 					</dl>
 				</DrawerContent>
 			</DrawerPortal>
-		</Drawer>
+		</DrawerRoot>
 	</section>
 </template>
