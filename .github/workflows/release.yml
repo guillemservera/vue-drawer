@@ -1,0 +1,45 @@
+name: Release
+
+# Publishes to npm when a GitHub release is published (tag vX.Y.Z matching package.json).
+# Auth: npm Trusted Publishing (OIDC) — no NPM_TOKEN. Configure once on npmjs.com:
+# package settings → Trusted Publisher → GitHub Actions, repo guillemservera/vue-drawer, workflow release.yml.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: vue-drawer-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          # Trusted Publishing needs npm >= 11.5.1 (ships with Node 24).
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - name: Check tag matches package version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Release tag ${GITHUB_REF_NAME} does not match package.json version v${version}"
+            exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci
+      # prepublishOnly re-runs typecheck/test/build/publint; provenance links the tarball to this run.
+      - run: npm publish --provenance --access public
