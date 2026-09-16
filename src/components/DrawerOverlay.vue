@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue'
 import { useDrawerRootContext } from '../utils/drawerContext'
+import { isOutsidePressOwnedByNestedLayer } from '../utils/drawerDom'
 import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
 
 defineOptions({
@@ -31,6 +32,7 @@ function assignOverlayRef(el: unknown) {
 
 function handleOverlayPointerDown(event: PointerEvent) {
 	if (event.target !== event.currentTarget) return
+	if (isOutsidePressOwnedByNestedLayer()) return
 	root.handleDismissAttempt(event)
 	if (event.defaultPrevented || !root.modal.value || !root.dismissible.value) return
 	event.stopPropagation()
