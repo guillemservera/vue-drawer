@@ -34,4 +34,4 @@ Use the issue templates for reproducible bugs and feature proposals. For securit
 
 1. Bump `version` in `package.json` in a pull request (`chore(release): x.y.z`) and merge it.
 2. Publish a GitHub release with tag `vx.y.z` on the merged commit.
-3. `.github/workflows/release.yml` checks that the tag matches `package.json`, runs `pnpm run ci` and publishes to npm with provenance through npm Trusted Publishing (no token).
+3. `.github/workflows/release.yml` checks that the tag matches `package.json`, runs `pnpm run ci` and publishes to npm with provenance through npm Trusted Publishing (no token). Releases marked as pre-release publish under the `next` dist-tag.
