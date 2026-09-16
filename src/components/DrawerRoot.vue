@@ -658,6 +658,7 @@ provideDrawerRootContext({
 	contentElement,
 	overlayElement,
 	isDragging,
+	nestedChildOpen,
 	gestureClosing,
 	skipCloseAnimation,
 	shouldAnimateInitialOpen,

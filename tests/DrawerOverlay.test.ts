@@ -108,4 +108,28 @@ describe('DrawerOverlay', () => {
 
 		wrapper.unmount()
 	})
+
+	it('marks the overlay while the drawer is dragged so it gets a GPU hint', async () => {
+		const css = readFileSync(join(process.cwd(), 'src/styles/drawer.css'), 'utf8')
+		expect(css).toMatch(/\.drawer-overlay--dragging \{\s*\/\*[\s\S]*?\*\/\s*will-change: opacity;/u)
+
+		const wrapper = mount(Harness, { attachTo: document.body, global: { stubs: { Transition: false } } })
+		await nextTick()
+		const probe = wrapper.getComponent(ContextProbe).vm.$.exposed as {
+			root: ReturnType<typeof useDrawerRootContext>
+		}
+		const overlay = wrapper.get('[data-drawer-overlay]')
+		expect(overlay.classes()).not.toContain('drawer-overlay--dragging')
+
+		probe.root.isDragging.value = true
+		await nextTick()
+		expect(overlay.classes()).toContain('drawer-overlay--dragging')
+		expect(overlay.attributes('data-dragging')).toBe('true')
+
+		probe.root.isDragging.value = false
+		await nextTick()
+		expect(overlay.classes()).not.toContain('drawer-overlay--dragging')
+
+		wrapper.unmount()
+	})
 })

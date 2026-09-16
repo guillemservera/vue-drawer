@@ -106,6 +106,8 @@ export interface DrawerRootContext {
 	contentElement: Ref<HTMLElement | null>
 	overlayElement: Ref<HTMLElement | null>
 	isDragging: Ref<boolean>
+	/** A nested child drawer is open: this content is scaled behind it and follows its drag. */
+	nestedChildOpen: Ref<boolean>
 	gestureClosing: Ref<boolean>
 	skipCloseAnimation: Ref<boolean>
 	shouldAnimateInitialOpen: Ref<boolean>

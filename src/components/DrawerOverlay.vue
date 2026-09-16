@@ -60,7 +60,8 @@ function handleOverlayPointerDown(event: PointerEvent) {
 			:data-snap-points-overlay="root.open.value && root.hasSnapPoints.value && root.shouldFadeOverlay.value ? 'true' : 'false'"
 			:data-state="root.open.value ? 'open' : 'closed'"
 			:data-close-animation="closeAnimation"
-			:class="['drawer-overlay', { 'drawer-overlay--non-modal': !root.modal.value }]"
+			:data-dragging="root.isDragging.value ? 'true' : 'false'"
+			:class="['drawer-overlay', { 'drawer-overlay--non-modal': !root.modal.value, 'drawer-overlay--dragging': root.isDragging.value }]"
 			@pointerdown="handleOverlayPointerDown"
 		/>
 	</Transition>

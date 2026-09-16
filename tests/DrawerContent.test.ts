@@ -44,6 +44,7 @@ const rootContext = vi.hoisted(() => {
 			contentElement: box<HTMLElement | null>(null),
 			overlayElement: box<HTMLElement | null>(null),
 		isDragging: box(false),
+		nestedChildOpen: box(false),
 		gestureClosing: box(false),
 			preventCloseAutoFocusOnce: box(false),
 			requestOpenChange: vi.fn(),
