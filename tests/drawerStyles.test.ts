@@ -29,5 +29,5 @@ it('keeps GPU layer hints off settled content so text keeps subpixel antialiasin
     expect(rule).toContain('translate(')
     expect(rule).not.toContain('translate3d')
   }
-  expect(drawerCss).toMatch(/\.drawer-content-enter-active,\s*\.drawer-content-leave-active,\s*\.drawer-content-leave-active--slide,\s*\.drawer-content-leave-active--fade,\s*\.drawer-content--dragging \{\s*will-change: transform;/)
+  expect(drawerCss).toMatch(/\.drawer-content-enter-active,\s*\.drawer-content-leave-active,\s*\.drawer-content-leave-active--slide,\s*\.drawer-content-leave-active--fade,\s*\.drawer-content--dragging,\s*\.drawer-content--nested-parent \{\s*will-change: transform;/)
 })

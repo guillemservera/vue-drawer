@@ -32,13 +32,16 @@
    kept at rest makes Chromium drop subpixel text antialiasing whenever the
    layer is not opaque, so settled content read blurrier than the page. For the
    same reason every resting transform (CSS and the inline JS ones) is 2-D;
-   3-D transforms stay on the offscreen/animation states. Inline JS transitions
-   (snap, release, nested scale) are promoted by the browser while they run. */
+   3-D transforms stay on the offscreen/animation states. A parent behind an open
+   nested child keeps the hints: it is scaled and follows the child's drag
+   frame by frame. Other inline JS transitions (snap, release) are promoted by
+   the browser while they run. */
 .drawer-content-enter-active,
 .drawer-content-leave-active,
 .drawer-content-leave-active--slide,
 .drawer-content-leave-active--fade,
-.drawer-content--dragging {
+.drawer-content--dragging,
+.drawer-content--nested-parent {
 	will-change: transform;
 	backface-visibility: hidden;
 	-webkit-backface-visibility: hidden;
@@ -286,7 +289,7 @@
 	left: 50%;
 	width: 44px;
 	height: 44px;
-	transform: translate3d(-50%, -50%, 0);
+	transform: translate(-50%, -50%);
 }
 
 .drawer-overlay {
@@ -301,9 +304,11 @@
 
 .drawer-overlay-enter-active,
 .drawer-overlay-leave-active,
-.drawer-overlay-leave-active--fade {
-	/* Motion-only, like the content: a resting composited overlay would promote
-	   the content above it ("overlap") and blur its text again. */
+.drawer-overlay-leave-active--fade,
+.drawer-overlay--dragging {
+	/* Motion-only, like the content (drag updates opacity inline every move): a
+	   resting composited overlay would promote the content above it
+	   ("overlap") and blur its text again. */
 	will-change: opacity;
 }
 

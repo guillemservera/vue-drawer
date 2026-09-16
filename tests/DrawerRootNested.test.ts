@@ -168,11 +168,13 @@ describe('DrawerRootNested', () => {
 
 		expect(content.style.transform).toContain('scale(')
 		expect(content.style.transform).toContain('translate(0, -16px)')
+		expect(content.classList.contains('drawer-content--nested-parent')).toBe(true)
 
 		;(wrapper.vm as unknown as { childOpen: boolean }).childOpen = false
 		await nextTick()
 
 		expect(content.style.transform).toBe('translate(0, 0px)')
+		expect(content.classList.contains('drawer-content--nested-parent')).toBe(false)
 
 		wrapper.unmount()
 	})

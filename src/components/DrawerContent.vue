@@ -317,7 +317,7 @@ function handleTrackedLostPointerCapture(event: PointerEvent) {
 			:data-close-animation="closeAnimation"
 			:data-dragging="root.isDragging.value ? 'true' : 'false'"
 			class="drawer-content"
-			:class="{ 'drawer-content--dragging': root.isDragging.value }"
+			:class="{ 'drawer-content--dragging': root.isDragging.value, 'drawer-content--nested-parent': root.nestedChildOpen.value }"
 			@pointerdown="handleTrackedPointerDown"
 			@pointermove="handleTrackedPointerMove"
 			@pointerup="handleTrackedPointerUp"
