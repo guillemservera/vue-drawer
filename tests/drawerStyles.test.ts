@@ -20,5 +20,14 @@ it('keeps GPU layer hints off settled content so text keeps subpixel antialiasin
   const base = drawerCss.match(/\n\.drawer-content \{[^}]*\}/)?.[0] ?? ''
   expect(base).not.toContain('will-change')
   expect(base).not.toContain('backface-visibility')
+  expect(base).not.toContain('translate3d')
+  const overlay = drawerCss.match(/\n\.drawer-overlay \{\n\topacity[^}]*\}/)?.[0] ?? ''
+  expect(overlay).toContain('opacity: var(--drawer-rest-overlay-opacity, 1);')
+  expect(overlay).not.toContain('will-change')
+  for (const direction of ['top', 'left', 'right']) {
+    const rule = drawerCss.match(new RegExp(`\\n\\.drawer-content\\[data-direction='${direction}'\\] \\{[^}]*\\}`))?.[0] ?? ''
+    expect(rule).toContain('translate(')
+    expect(rule).not.toContain('translate3d')
+  }
   expect(drawerCss).toMatch(/\.drawer-content-enter-active,\s*\.drawer-content-leave-active,\s*\.drawer-content-leave-active--slide,\s*\.drawer-content-leave-active--fade,\s*\.drawer-content--dragging \{\s*will-change: transform;/)
 })

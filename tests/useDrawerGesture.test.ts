@@ -185,7 +185,7 @@ describe('useDrawerGesture', () => {
 		exposed.gesture.handlePointerDown(createPointerEvent('pointerdown', exposed.content, 1, 0))
 		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.content, 1, 40))
 		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.content, 1, -40))
-		expect(exposed.content.style.transform).toContain('translate3d(0, -')
+		expect(exposed.content.style.transform).toContain('translate(0, -')
 		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.content, 1, 140))
 		exposed.gesture.handlePointerUp(createPointerEvent('pointerup', exposed.content, 1, 140))
 

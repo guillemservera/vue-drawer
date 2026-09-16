@@ -167,12 +167,12 @@ describe('DrawerRootNested', () => {
 		const content = parentProbe.root.contentElement.value!
 
 		expect(content.style.transform).toContain('scale(')
-		expect(content.style.transform).toContain('translate3d(0, -16px, 0)')
+		expect(content.style.transform).toContain('translate(0, -16px)')
 
 		;(wrapper.vm as unknown as { childOpen: boolean }).childOpen = false
 		await nextTick()
 
-		expect(content.style.transform).toBe('translate3d(0, 0px, 0)')
+		expect(content.style.transform).toBe('translate(0, 0px)')
 
 		wrapper.unmount()
 	})
@@ -198,16 +198,16 @@ describe('DrawerRootNested', () => {
 		parentProbe.root.onNestedDrag(0.5)
 
 		expect(content.style.transition).toBe('none')
-		expect(content.style.transform).toContain('translate3d(0, -8px, 0)')
+		expect(content.style.transform).toContain('translate(0, -8px)')
 
 		parentProbe.root.onNestedRelease(true)
 
-		expect(content.style.transform).toContain('translate3d(0, -16px, 0)')
+		expect(content.style.transform).toContain('translate(0, -16px)')
 
 		parentProbe.root.onNestedDrag(0.5)
 		parentProbe.root.onNestedRelease(false)
 
-		expect(content.style.transform).toBe('translate3d(0, 0px, 0)')
+		expect(content.style.transform).toBe('translate(0, 0px)')
 
 		wrapper.unmount()
 	})
