@@ -1,6 +1,5 @@
 export const DRAWER_RECENT_OPEN_WINDOW_MS = 500
 const DRAWER_TRANSITION_FALLBACK_BUFFER_MS = 60
-const bodyPointerEventLocks = new Set<string>()
 
 export function focusWithDrawerMarker(element: HTMLElement): boolean {
 	element.setAttribute('data-drawer-return-focus', 'true')
@@ -22,7 +21,6 @@ export function focusWithDrawerMarker(element: HTMLElement): boolean {
 	window.addEventListener('focus', clearMarker)
 	return true
 }
-let previousBodyPointerEvents: string | null = null
 
 export function isDrawerTransitionEnd(
 	event: Event,
@@ -35,32 +33,22 @@ export function isDrawerTransitionEnd(
 	return transitionPropertyName === propertyName || transitionPropertyName === 'all'
 }
 
+/**
+ * A nested modal layer above the drawer (a Radix/reka menu, popover or dialog) disables
+ * `body` pointer events and owns every press outside itself: it dismisses on it. The
+ * drawer below must not dismiss too (Radix's layer stack does the same), or a tap that
+ * closes a menu would also close the drawer that holds it. The inline style is the only
+ * cross-library signal for that (Radix/reka set it while such a layer is open); it is not
+ * a public API, so a change there would bring the double dismissal back.
+ */
+export function isOutsidePressOwnedByNestedLayer() {
+	return typeof document !== 'undefined' && document.body.style.pointerEvents === 'none'
+}
+
 export function restoreBodyPointerEvents() {
 	if (typeof document === 'undefined') return
-	if (bodyPointerEventLocks.size > 0) return
 	if (document.body.style.pointerEvents !== 'none') return
 	document.body.style.pointerEvents = 'auto'
-}
-
-export function lockBodyPointerEvents(lockId: string) {
-	if (typeof document === 'undefined') return
-	if (bodyPointerEventLocks.has(lockId)) return
-
-	if (bodyPointerEventLocks.size === 0) {
-		previousBodyPointerEvents = document.body.style.pointerEvents
-	}
-
-	bodyPointerEventLocks.add(lockId)
-	document.body.style.pointerEvents = 'none'
-}
-
-export function unlockBodyPointerEvents(lockId: string) {
-	if (typeof document === 'undefined') return
-	if (!bodyPointerEventLocks.delete(lockId)) return
-	if (bodyPointerEventLocks.size > 0) return
-
-	document.body.style.pointerEvents = previousBodyPointerEvents ?? ''
-	previousBodyPointerEvents = null
 }
 
 export function scheduleBodyPointerEventsRestore() {

@@ -269,6 +269,8 @@ Provide a visible `DrawerTitle` whenever possible. If your UI needs a visually h
 
 For `modal=false`, outside pointer and focus events are still emitted but do not close the drawer by default.
 
+Menus, popovers and dialogs portalled out of the drawer should carry `data-drawer-branch` so presses and focus inside them count as inside the drawer. While a modal Radix/Reka layer is open above the drawer (it sets `pointer-events: none` on `body`), presses outside it belong to that layer: they close the menu, not the drawer.
+
 ```vue
 <DrawerRoot v-model:open="open">
   <DrawerPortal>

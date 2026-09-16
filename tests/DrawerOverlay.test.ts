@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { mount } from '@vue/test-utils'
 import { defineComponent, nextTick, ref } from 'vue'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 
 import DrawerContent from '../src/components/DrawerContent.vue'
 import DrawerOverlay from '../src/components/DrawerOverlay.vue'
@@ -106,6 +106,28 @@ describe('DrawerOverlay', () => {
 		expect(probe.root.closeAnimation.value).toBe('slide')
 		expect(overlay.attributes('data-close-animation')).toBe('slide')
 
+		wrapper.unmount()
+	})
+
+	it('leaves an overlay press to a nested modal layer that disabled body pointer events', async () => {
+		const wrapper = mount(Harness, { attachTo: document.body, global: { stubs: { Transition: false } } })
+		await nextTick()
+		document.body.style.pointerEvents = 'none'
+		onTestFinished(() => {
+			document.body.style.pointerEvents = ''
+		})
+
+		const pointerDown = new Event('pointerdown', { bubbles: true, cancelable: true })
+		wrapper.get('[data-drawer-overlay]').element.dispatchEvent(pointerDown)
+		const outside = document.createElement('button')
+		document.body.append(outside)
+		outside.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }))
+		await nextTick()
+
+		expect(pointerDown.defaultPrevented).toBe(false)
+		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(true)
+
+		outside.remove()
 		wrapper.unmount()
 	})
 

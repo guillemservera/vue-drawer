@@ -4,6 +4,7 @@ import type {
 	DrawerFocusOutsideEvent,
 	DrawerPointerDownOutsideEvent,
 } from '../utils/drawerTypes'
+import { isOutsidePressOwnedByNestedLayer } from '../utils/drawerDom'
 import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
 import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
 
@@ -52,6 +53,7 @@ function handleDocumentPointerDown(event: PointerEvent) {
 	if (!layer || isEventInsideLayer(event, layer)) return
 	if (isOverlayTarget(event)) return
 	if (isElementInsideDrawerBranch(event.target)) return
+	if (isOutsidePressOwnedByNestedLayer()) return
 
 	const outsideEvent = new CustomEvent<{ originalEvent: PointerEvent }>('drawer.pointerDownOutside', {
 		cancelable: true,
