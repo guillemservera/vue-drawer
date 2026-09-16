@@ -143,9 +143,12 @@ describe('DrawerHandle', () => {
 		const wrapper = await mountHarness()
 		const handle = wrapper.get('[data-drawer-handle]')
 
-		await handle.trigger('pointerdown', { pageX: 0, pageY: 0 })
+		// jsdom 30 exposes pageX/pageY as getters: dispatch real pointer events instead of assigning them.
+		handle.element.dispatchEvent(createPointerEvent('pointerdown', 1, 0))
+		await nextTick()
 		vi.advanceTimersByTime(250)
-		await handle.trigger('pointerup', { pageX: 0, pageY: 0 })
+		handle.element.dispatchEvent(createPointerEvent('pointerup', 1, 0))
+		await nextTick()
 		await handle.trigger('click')
 		vi.advanceTimersByTime(120)
 		await nextTick()
