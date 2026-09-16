@@ -131,6 +131,27 @@ describe('DrawerOverlay', () => {
 		wrapper.unmount()
 	})
 
+	it('still dismisses when the body lock predates the drawer (a lower modal layer)', async () => {
+		document.body.style.pointerEvents = 'none'
+		onTestFinished(() => {
+			document.body.style.pointerEvents = ''
+		})
+		const wrapper = mount(Harness, { attachTo: document.body, global: { stubs: { Transition: false } } })
+		await nextTick()
+		const probe = wrapper.getComponent(ContextProbe).vm.$.exposed as {
+			root: ReturnType<typeof useDrawerRootContext>
+		}
+
+		// Once open, the drawer releases a lock it did not take, so it is the top layer again.
+		probe.root.handleAfterOpen()
+		await new Promise(resolve => requestAnimationFrame(resolve))
+		wrapper.get('[data-drawer-overlay]').element.dispatchEvent(new Event('pointerdown', { bubbles: true, cancelable: true }))
+		await nextTick()
+
+		expect((wrapper.vm as unknown as { open: boolean }).open).toBe(false)
+		wrapper.unmount()
+	})
+
 	it('marks the overlay while the drawer is dragged so it gets a GPU hint', async () => {
 		const css = readFileSync(join(process.cwd(), 'src/styles/drawer.css'), 'utf8')
 		expect(css).toMatch(/\.drawer-overlay--dragging \{\s*\/\*[\s\S]*?\*\/\s*will-change: opacity;/u)
