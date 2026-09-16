@@ -16,7 +16,6 @@
 
 .drawer-content {
 	position: var(--drawer-position, relative);
-	will-change: transform;
 	/* No `background: inherit` here on purpose: this rule is UNLAYERED, so it
 	   would beat consumers' Tailwind `bg-*` utilities and force them into
 	   `!important` just to make the content transparent (which then clips a
@@ -25,9 +24,22 @@
 	   below still inherits whatever background the content ends up with. */
 	transform: translate3d(0, var(--drawer-rest-offset, 0px), 0);
 	transform-origin: top center;
+	touch-action: none;
+}
+
+/* GPU-layer hints only while the content moves (enter, leave, drag). A layer
+   kept at rest makes Chromium drop subpixel text antialiasing whenever the
+   layer is not opaque, so settled content read blurrier than the page.
+   Inline JS transitions (snap, release, nested scale) are promoted by the
+   browser for their duration anyway. */
+.drawer-content-enter-active,
+.drawer-content-leave-active,
+.drawer-content-leave-active--slide,
+.drawer-content-leave-active--fade,
+.drawer-content--dragging {
+	will-change: transform;
 	backface-visibility: hidden;
 	-webkit-backface-visibility: hidden;
-	touch-action: none;
 }
 
 .drawer-overlay[data-state='open'] {

@@ -15,3 +15,10 @@ it('uses Vaul-compatible 500ms slide timing for drawer and overlay motion', () =
   expect(drawerCss).toContain('--drawer-close-duration-ms: 500;')
   expect(drawerCss).toContain('transition: opacity var(--drawer-duration, 500ms) var(--drawer-ease);')
 })
+
+it('keeps GPU layer hints off settled content so text keeps subpixel antialiasing', () => {
+  const base = drawerCss.match(/\n\.drawer-content \{[^}]*\}/)?.[0] ?? ''
+  expect(base).not.toContain('will-change')
+  expect(base).not.toContain('backface-visibility')
+  expect(drawerCss).toMatch(/\.drawer-content-enter-active,\s*\.drawer-content-leave-active,\s*\.drawer-content-leave-active--slide,\s*\.drawer-content-leave-active--fade,\s*\.drawer-content--dragging \{\s*will-change: transform;/)
+})
