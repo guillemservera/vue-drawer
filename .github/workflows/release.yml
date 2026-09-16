@@ -42,4 +42,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ci
       # prepublishOnly re-runs typecheck/test/build/publint; provenance links the tarball to this run.
-      - run: npm publish --provenance --access public
+      # GitHub prereleases go to the `next` dist-tag so ordinary installs keep resolving `latest`.
+      - name: Publish
+        env:
+          DIST_TAG: ${{ github.event.release.prerelease && 'next' || 'latest' }}
+        run: npm publish --provenance --access public --tag "$DIST_TAG"
