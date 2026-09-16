@@ -22,16 +22,18 @@
 	   rounded inner panel's corners). Consumers own their surface — on the
 	   content element or an inner panel — and the `::after` overscroll bleed
 	   below still inherits whatever background the content ends up with. */
-	transform: translate3d(0, var(--drawer-rest-offset, 0px), 0);
+	/* 2-D at rest: a 3-D transform is itself a compositing trigger (see the motion-only hints below). */
+	transform: translate(0, var(--drawer-rest-offset, 0px));
 	transform-origin: top center;
 	touch-action: none;
 }
 
 /* GPU-layer hints only while the content moves (enter, leave, drag). A layer
    kept at rest makes Chromium drop subpixel text antialiasing whenever the
-   layer is not opaque, so settled content read blurrier than the page.
-   Inline JS transitions (snap, release, nested scale) are promoted by the
-   browser for their duration anyway. */
+   layer is not opaque, so settled content read blurrier than the page. For the
+   same reason every resting transform (CSS and the inline JS ones) is 2-D;
+   3-D transforms stay on the offscreen/animation states. Inline JS transitions
+   (snap, release, nested scale) are promoted by the browser while they run. */
 .drawer-content-enter-active,
 .drawer-content-leave-active,
 .drawer-content-leave-active--slide,
@@ -64,17 +66,17 @@
 
 .drawer-content[data-direction='top'] {
 	transform-origin: bottom center;
-	transform: translate3d(0, calc(var(--drawer-rest-offset, 0px) * -1), 0);
+	transform: translate(0, calc(var(--drawer-rest-offset, 0px) * -1));
 }
 
 .drawer-content[data-direction='left'] {
 	transform-origin: left center;
-	transform: translate3d(calc(var(--drawer-rest-offset, 0px) * -1), 0, 0);
+	transform: translate(calc(var(--drawer-rest-offset, 0px) * -1), 0);
 }
 
 .drawer-content[data-direction='right'] {
 	transform-origin: right center;
-	transform: translate3d(var(--drawer-rest-offset, 0px), 0, 0);
+	transform: translate(var(--drawer-rest-offset, 0px), 0);
 }
 
 .drawer-content::after {
@@ -288,7 +290,6 @@
 }
 
 .drawer-overlay {
-	will-change: opacity;
 	opacity: var(--drawer-rest-overlay-opacity, 1);
 	touch-action: none;
 	overscroll-behavior: contain;
@@ -296,6 +297,14 @@
 
 .drawer-overlay[data-state='closed'] {
 	pointer-events: none;
+}
+
+.drawer-overlay-enter-active,
+.drawer-overlay-leave-active,
+.drawer-overlay-leave-active--fade {
+	/* Motion-only, like the content: a resting composited overlay would promote
+	   the content above it ("overlap") and blur its text again. */
+	will-change: opacity;
 }
 
 .drawer-overlay-enter-active {

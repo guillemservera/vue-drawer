@@ -49,16 +49,18 @@ export function getViewportSize(direction: DrawerDirection) {
 	return isVerticalDrawer(direction) ? window.innerHeight : window.innerWidth
 }
 
+// 2-D on purpose: these also style settled content (snap points, nested parents), where a 3-D
+// transform would keep a compositing layer and blur text. Drag and transitions get GPU hints from CSS.
 export function getTranslateStyles(direction: DrawerDirection, distance: number) {
 	switch (direction) {
 		case 'bottom':
-			return `translate3d(0, ${distance}px, 0)`
+			return `translate(0, ${distance}px)`
 		case 'top':
-			return `translate3d(0, ${distance * -1}px, 0)`
+			return `translate(0, ${distance * -1}px)`
 		case 'left':
-			return `translate3d(${distance * -1}px, 0, 0)`
+			return `translate(${distance * -1}px, 0)`
 		case 'right':
-			return `translate3d(${distance}px, 0, 0)`
+			return `translate(${distance}px, 0)`
 	}
 }
 
@@ -71,16 +73,16 @@ export function getNestedParentTransform(direction: DrawerDirection, closeProgre
 	const displacement = DRAWER_NESTED_PARENT_DISPLACEMENT * openProgress
 
 	if (direction === 'left') {
-		return `scale(${scale}) translate3d(${displacement}px, 0, 0)`
+		return `scale(${scale}) translate(${displacement}px, 0)`
 	}
 
 	if (direction === 'right') {
-		return `scale(${scale}) translate3d(${-displacement}px, 0, 0)`
+		return `scale(${scale}) translate(${-displacement}px, 0)`
 	}
 
 	if (direction === 'top') {
-		return `scale(${scale}) translate3d(0, ${displacement}px, 0)`
+		return `scale(${scale}) translate(0, ${displacement}px)`
 	}
 
-	return `scale(${scale}) translate3d(0, ${-displacement}px, 0)`
+	return `scale(${scale}) translate(0, ${-displacement}px)`
 }

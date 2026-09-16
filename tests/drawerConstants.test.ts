@@ -23,10 +23,10 @@ describe('drawerConstants', () => {
 	})
 
 	it('builds translate values in the close direction for each drawer side', () => {
-		expect(getTranslateStyles('bottom', 24)).toBe('translate3d(0, 24px, 0)')
-		expect(getTranslateStyles('top', 24)).toBe('translate3d(0, -24px, 0)')
-		expect(getTranslateStyles('left', 24)).toBe('translate3d(-24px, 0, 0)')
-		expect(getTranslateStyles('right', 24)).toBe('translate3d(24px, 0, 0)')
+		expect(getTranslateStyles('bottom', 24)).toBe('translate(0, 24px)')
+		expect(getTranslateStyles('top', 24)).toBe('translate(0, -24px)')
+		expect(getTranslateStyles('left', 24)).toBe('translate(-24px, 0)')
+		expect(getTranslateStyles('right', 24)).toBe('translate(24px, 0)')
 	})
 
 	it('returns off-screen closed transforms for each direction', () => {
@@ -37,9 +37,9 @@ describe('drawerConstants', () => {
 	})
 
 	it('builds parent transforms for nested drawers without targeting the page background', () => {
-		expect(getNestedParentTransform('bottom')).toContain('translate3d(0, -16px, 0)')
-		expect(getNestedParentTransform('top')).toContain('translate3d(0, 16px, 0)')
-		expect(getNestedParentTransform('left')).toContain('translate3d(16px, 0, 0)')
-		expect(getNestedParentTransform('right')).toContain('translate3d(-16px, 0, 0)')
+		expect(getNestedParentTransform('bottom')).toContain('translate(0, -16px)')
+		expect(getNestedParentTransform('top')).toContain('translate(0, 16px)')
+		expect(getNestedParentTransform('left')).toContain('translate(16px, 0)')
+		expect(getNestedParentTransform('right')).toContain('translate(-16px, 0)')
 	})
 })

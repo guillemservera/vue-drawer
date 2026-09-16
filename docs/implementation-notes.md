@@ -47,3 +47,15 @@ VueDrawer remains headless:
 - do not add a Safari-only tint sampler to core;
 - treat the 90–105% range as an implementation clue, not a public sizing rule;
 - promote guidance to the README only after the combined case above establishes the cause.
+
+## Chromium text antialiasing on settled drawers
+
+### Confirmed behavior
+
+Chromium renders subpixel (LCD) text antialiasing only in composited layers it can treat as opaque. Settled drawer content used to stay a composited layer because of three always-on triggers: `will-change: transform`, `backface-visibility: hidden`, and 3-D `translate3d()` resting transforms (CSS and the inline transforms set by JS for snap points and nested parents). With the surface on an inner panel, that transparent layer fell back to grayscale antialiasing and read blurrier than the page.
+
+### Package behavior
+
+- GPU hints (`will-change`, `backface-visibility`) apply only while content or overlay move: enter, leave and drag states.
+- Resting transforms are 2-D (`translate()`); 3-D transforms stay on offscreen and animation states.
+- Chromium may still promote drawer content for `Overlap` when the page itself has composited layers (for example scroll containers). That is page-dependent, and an opaque surface directly on `DrawerContent` keeps text crisp in that case, which matches the Safari guidance above.
