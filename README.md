@@ -158,6 +158,8 @@ Use `DrawerRootNested` instead of setting `nested` manually for nested drawers.
 
 `dismissible=false` prevents Escape, modal outside pointer, close-direction drag and overlay dismissal from closing the drawer. Use it with controlled state so your app still has an explicit way to close.
 
+Left and right drawers stay anchored at their fully open position when dragged away from the closing direction. Vertical drawers retain their elastic overdrag; snap-point bounds are unchanged.
+
 `animation` controls the open animation and `closeAnimation` controls normal non-gesture closes. The default slide motion matches Vaul's `500ms` duration and `cubic-bezier(0.32, 0.72, 0, 1)` easing for both drawer and overlay. For example, `animation="fade" closeAnimation="slide"` gives a fade-in and the classic slide-out close. Drag gestures still follow the pointer and close with transform. The fade defaults are intentionally quick (`260ms` in, `180ms` out) with no movement, and can be tuned with CSS variables such as `--drawer-fade-enter-duration`, `--drawer-fade-leave-duration`, `--drawer-fade-ease`, and `--drawer-fade-enter-offset`.
 
 `DrawerTitle` and `DrawerDescription` automatically register generated IDs with `DrawerContent`, which sets `aria-labelledby` and `aria-describedby` unless you provide those attributes yourself. `DrawerTrigger` renders an accessible button with `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls`. `DrawerClose` renders a button that closes the active root. Inside nested drawers, set `scope="all"` to close the top-level root and let the nested stack clean itself up. Opening a nested drawer adds Vaul-style depth only to the direct parent drawer content; VueDrawer does not scale the page background globally.

@@ -647,9 +647,12 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		}
 
 		const drawerSize = gestureDrawerSize
-		const offset = closeDistance >= 0
-			? closeDistance
-			: -Math.max(dampenValue(-closeDistance), 0)
+		// Side drawers stay anchored at their open edge; only vertical sheets overdrag.
+		const offset = !isVerticalDrawer(direction.value)
+			? Math.max(closeDistance, 0)
+			: closeDistance >= 0
+				? closeDistance
+				: -Math.max(dampenValue(-closeDistance), 0)
 		currentOffset.value = offset
 		setDraggingStyles(offset, drawerSize, [])
 		emitDrag(event, Math.min(Math.max(offset, 0) / drawerSize, 1))
