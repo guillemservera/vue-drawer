@@ -763,11 +763,7 @@ describe('useDrawerGesture', () => {
 		wrapper.unmount()
 	})
 
-	// Regression guard: horizontal drawers (nav sidebars) must remain swipeable
-	// even when the gesture starts on an interactive element, because their whole
-	// surface is nav buttons/links. Only vertical sheets treat interactive
-	// controls as no-drag zones (see the test above).
-	it('captures horizontal swipe gestures that start on nav buttons', () => {
+	it.each(['left', 'right'] as const)('keeps the %s drawer anchored through reverse swipes on nav buttons', (direction) => {
 		const Harness = defineComponent({
 			setup(_, { expose }) {
 				const content = document.createElement('div')
@@ -794,7 +790,7 @@ describe('useDrawerGesture', () => {
 				const gesture = useDrawerGesture({
 					open,
 					openedAt: ref(Date.now() - 1000),
-					direction: ref('left'),
+					direction: ref(direction),
 					dismissible: ref(true),
 					closeThreshold: ref(0.25),
 					scrollLockTimeout: ref(500),
@@ -827,7 +823,7 @@ describe('useDrawerGesture', () => {
 					onNestedRelease: () => undefined,
 				})
 
-				expose({ gesture, isDragging, button, requestOpenChange })
+				expose({ gesture, content, open, button })
 
 				return () => null
 			},
@@ -836,16 +832,32 @@ describe('useDrawerGesture', () => {
 		const wrapper = mount(Harness)
 		const exposed = wrapper.vm.$.exposed as {
 			gesture: ReturnType<typeof useDrawerGesture>
-			isDragging: { value: boolean }
+			content: HTMLElement
+			open: { value: boolean }
 			button: HTMLButtonElement
-			requestOpenChange: ReturnType<typeof vi.fn>
 		}
 
-		// Swipe left across the nav button: clientX 200 -> 40 closes a left drawer.
-		exposed.gesture.handlePointerDown(createPointerEvent('pointerdown', exposed.button, 1, 0, 200))
-		exposed.gesture.handlePointerMove(createPointerEvent('pointermove', exposed.button, 1, 0, 40))
+		const sign = direction === 'left' ? -1 : 1
+		const pointer = (type: string, distance: number) =>
+			createPointerEvent(type, exposed.button, 1, 0, 200 + sign * distance)
+		for (const end of ['release', 'cancel'] as const) {
+			exposed.gesture.handlePointerDown(pointer('pointerdown', 0))
+			exposed.gesture.handlePointerMove(pointer('pointermove', -100))
+			expect(exposed.content.style.transform).toBe(getTranslateStyles(direction, 0))
+			exposed.gesture.handlePointerMove(pointer('pointermove', 40))
+			expect(exposed.content.style.transform).toBe(getTranslateStyles(direction, 40))
+			exposed.gesture.handlePointerMove(pointer('pointermove', -100))
+			expect(exposed.content.style.transform).toBe(getTranslateStyles(direction, 0))
+			if (end === 'release') exposed.gesture.handlePointerUp(pointer('pointerup', -100))
+			else exposed.gesture.handlePointerCancel(pointer('pointercancel', -100))
+			expect(exposed.open.value).toBe(true)
+		}
 
-		expect(exposed.isDragging.value).toBe(true)
+		exposed.gesture.handlePointerDown(pointer('pointerdown', 0))
+		exposed.gesture.handlePointerMove(pointer('pointermove', 160))
+		exposed.gesture.handlePointerUp(pointer('pointerup', 160))
+		expect(exposed.open.value).toBe(false)
+		expect(exposed.content.style.transform).toBe(getClosedTransform(direction))
 
 		wrapper.unmount()
 	})
