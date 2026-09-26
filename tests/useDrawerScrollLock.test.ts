@@ -38,6 +38,9 @@ const TestHarness = defineComponent({
 				setNoBodyStyles(value: boolean) {
 					noBodyStyles.value = value
 				},
+				setPreventScrollRestoration(value: boolean) {
+					preventScrollRestoration.value = value
+				},
 			})
 
 		return {
@@ -277,9 +280,99 @@ describe('useDrawerScrollLock', () => {
 		Object.defineProperty(window, 'scrollY', { configurable: true, value: 188 })
 		window.dispatchEvent(new Event('scroll'))
 
-		expect(window.scrollTo).toHaveBeenCalledWith(0, 120)
+		expect(window.scrollTo).toHaveBeenCalledWith({ left: 0, top: 120, behavior: 'instant' })
 
 		wrapper.unmount()
+	})
+
+	it('restores the iOS window scroll synchronously and instantly when the drawer closes', async () => {
+		// Frames never run: the restore must not depend on requestAnimationFrame,
+		// otherwise the page paints one frame at the top before jumping back.
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1)
+		Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 })
+		Object.defineProperty(window, 'scrollY', { configurable: true, value: 640 })
+
+		const wrapper = mount(TestHarness)
+		const vm = wrapper.vm as unknown as { setOpen: (value: boolean) => void }
+		vm.setOpen(true)
+		await nextTick()
+		expect(document.body.style.top).toBe('-640px')
+		vi.mocked(window.scrollTo).mockClear()
+
+		vm.setOpen(false)
+		await nextTick()
+
+		expect(document.body.style.position).toBe('')
+		expect(window.scrollTo).toHaveBeenCalledTimes(1)
+		expect(window.scrollTo).toHaveBeenCalledWith({ left: 0, top: 640, behavior: 'instant' })
+
+		wrapper.unmount()
+	})
+
+	it('defers the iOS window scroll restore one frame when preventScrollRestoration is enabled', async () => {
+		const frames: FrameRequestCallback[] = []
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+			frames.push(callback)
+			return frames.length
+		})
+		Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 })
+		Object.defineProperty(window, 'scrollY', { configurable: true, value: 320 })
+
+		const wrapper = mount(TestHarness)
+		const vm = wrapper.vm as unknown as {
+			setOpen: (value: boolean) => void
+			setPreventScrollRestoration: (value: boolean) => void
+		}
+		vm.setPreventScrollRestoration(true)
+		vm.setOpen(true)
+		await nextTick()
+		vi.mocked(window.scrollTo).mockClear()
+		frames.length = 0
+
+		vm.setOpen(false)
+		await nextTick()
+
+		expect(document.body.style.position).toBe('')
+		expect(window.scrollTo).not.toHaveBeenCalled()
+
+		frames.splice(0).forEach(callback => callback(0))
+
+		expect(window.scrollTo).toHaveBeenCalledTimes(1)
+		expect(window.scrollTo).toHaveBeenCalledWith({ left: 0, top: 320, behavior: 'instant' })
+
+		wrapper.unmount()
+	})
+
+	it('skips the iOS window scroll restore after navigating from inside the drawer with preventScrollRestoration', async () => {
+		const frames: FrameRequestCallback[] = []
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+			frames.push(callback)
+			return frames.length
+		})
+		Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 })
+		Object.defineProperty(window, 'scrollY', { configurable: true, value: 320 })
+		const initialUrl = window.location.href
+
+		const wrapper = mount(TestHarness)
+		const vm = wrapper.vm as unknown as {
+			setOpen: (value: boolean) => void
+			setPreventScrollRestoration: (value: boolean) => void
+		}
+		vm.setPreventScrollRestoration(true)
+		vm.setOpen(true)
+		await nextTick()
+		vi.mocked(window.scrollTo).mockClear()
+		frames.length = 0
+
+		window.history.pushState({}, '', '/navigated-from-drawer')
+		vm.setOpen(false)
+		await nextTick()
+		frames.splice(0).forEach(callback => callback(0))
+
+		expect(window.scrollTo).not.toHaveBeenCalled()
+
+		wrapper.unmount()
+		window.history.replaceState({}, '', initialUrl)
 	})
 
 	it('locks document overflow on non-iOS browsers', async () => {

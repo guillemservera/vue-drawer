@@ -130,6 +130,8 @@ import {
 
 Use `DrawerRootNested` instead of setting `nested` manually for nested drawers.
 
+On iOS Safari, `preventScroll` pins `<body>` with `position: fixed` while the drawer is open. On close, the page scroll is restored in the same task that unpins the body, with `behavior: 'instant'`, so it neither flashes the top of the page nor animates under `scroll-behavior: smooth`. With `preventScrollRestoration`, the restore waits one frame to detect a navigation triggered from inside the drawer (in that case it is skipped), so the top of the page can be visible for one frame.
+
 ### Trigger Props
 
 | Prop | Type | Default |

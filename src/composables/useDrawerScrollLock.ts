@@ -495,6 +495,12 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 		scrollPos.value = window.scrollY
 	}
 
+	function restoreWindowScroll(left: number, top: number) {
+		// `instant` overrides a consumer's `scroll-behavior: smooth` on <html>,
+		// which would otherwise animate the page from the top back to `top`.
+		window.scrollTo({ left, top, behavior: 'instant' })
+	}
+
 	function scheduleLockedWindowScrollRestore() {
 		if (typeof window === 'undefined' || windowScrollRestoreFrame.value !== null) return
 
@@ -506,7 +512,7 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 			// Vaul uses a window scroll listener as the last line of defense on iOS.
 			// Safari can still move the root viewport while the body is fixed,
 			// especially around browser chrome and keyboard transitions.
-			window.scrollTo(lockedScrollX.value, lockedScrollY.value)
+			restoreWindowScroll(lockedScrollX.value, lockedScrollY.value)
 		})
 	}
 
@@ -588,8 +594,9 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 		if (!canUseBodyFix() || !previousBodyPosition) return
 		clearBodyPositionAdjustmentTimer()
 
-		const scrollY = -Number.parseInt(document.body.style.top || '0', 10)
-		const scrollX = -Number.parseInt(document.body.style.left || '0', 10)
+		// `|| 0` normalizes the -0 produced by negating an unscrolled `0px`.
+		const scrollY = -Number.parseInt(document.body.style.top || '0', 10) || 0
+		const scrollX = -Number.parseInt(document.body.style.left || '0', 10) || 0
 
 		hasBodyPositionLock.value = false
 		clearWindowScrollRestoreFrame()
@@ -604,13 +611,24 @@ export function useDrawerScrollLock(options: UseDrawerScrollLockOptions) {
 		lockedScrollX.value = 0
 		lockedScrollY.value = 0
 
+		if (!preventScrollRestoration.value) {
+			// Restore in the same task that removes the body lock so the browser
+			// never paints a frame with the unpinned page at the top.
+			restoreWindowScroll(scrollX, scrollY)
+			return
+		}
+
+		// With preventScrollRestoration, wait one frame so a navigation triggered
+		// from inside the drawer is visible in `location.href` and the new page is
+		// not scrolled to the old position. Trade-off: in this mode the page can
+		// paint one frame at the top before the restore.
 		window.requestAnimationFrame(() => {
-			if (preventScrollRestoration.value && activeUrl.value !== window.location.href) {
+			if (activeUrl.value !== window.location.href) {
 				activeUrl.value = window.location.href
 				return
 			}
 
-			window.scrollTo(scrollX, scrollY)
+			restoreWindowScroll(scrollX, scrollY)
 		})
 	}
 
