@@ -111,9 +111,9 @@ const {
 })
 const contentRef = ref<HTMLElement | null>(null)
 
-// While a nested drawer is open its own trap owns focus. Its content is portalled outside this one, so this trap
-// would otherwise pull every focus inside the child back here (a native select there lost focus as it opened).
-const isFocusTrapActive = computed(() => isModalOpen.value && !root.nestedChildOpen.value)
+// While a modal nested drawer is open its own trap owns focus. Its content is portalled outside this one, so this
+// trap would otherwise pull every focus inside the child back here (a native select there lost focus as it opened).
+const isFocusTrapActive = computed(() => isModalOpen.value && !root.nestedModalChildOpen.value)
 
 const focusScope = useDrawerFocusScope({
 	contentElement: contentRef,

@@ -123,10 +123,12 @@ const FocusHarness = defineComponent({
 	setup() {
 		const open = ref(true)
 		const childOpen = ref(false)
+		const childModal = ref(true)
 
 		return {
 			open,
 			childOpen,
+			childModal,
 		}
 	},
 	template: `
@@ -134,7 +136,7 @@ const FocusHarness = defineComponent({
 			<DrawerContent aria-label="Parent drawer">
 				<button class="parent-button">Parent</button>
 			</DrawerContent>
-			<DrawerRootNested v-model:open="childOpen">
+			<DrawerRootNested v-model:open="childOpen" :modal="childModal">
 				<DrawerContent aria-label="Nested drawer">
 					<select class="child-select"><option>One</option></select>
 				</DrawerContent>
@@ -310,6 +312,27 @@ describe('DrawerRootNested', () => {
 		await Promise.resolve()
 		await Promise.resolve()
 		expect(document.activeElement).toBe(parentButton)
+
+		outside.remove()
+		wrapper.unmount()
+	})
+
+	it('keeps the parent trapping focus while a non-modal nested drawer is open', async () => {
+		const wrapper = mount(FocusHarness, { attachTo: document.body })
+		await nextTick()
+
+		;(wrapper.vm as unknown as { childModal: boolean }).childModal = false
+		;(wrapper.vm as unknown as { childOpen: boolean }).childOpen = true
+		await nextTick()
+		await nextTick()
+
+		// The non-modal child has no trap of its own: focus leaving both drawers comes back to the parent.
+		const outside = document.createElement('button')
+		document.body.append(outside)
+		outside.focus()
+		await Promise.resolve()
+		await Promise.resolve()
+		expect(document.activeElement).toBe(document.querySelector('.parent-button'))
 
 		outside.remove()
 		wrapper.unmount()

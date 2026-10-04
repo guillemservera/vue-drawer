@@ -71,6 +71,7 @@ const skipCloseAnimation = ref(false)
 const closeAnimationOverride = ref<DrawerAnimation | null>(null)
 const preventCloseAutoFocusOnce = ref(false)
 const nestedChildOpen = ref(false)
+const nestedModalChildOpen = ref(false)
 const drawerId = createDrawerId(props.direction, props.nested)
 const domIdBase = `vuedrawer-${drawerId.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}`
 const defaultContentId = `${domIdBase}-content`
@@ -461,6 +462,10 @@ function setNestedChildOpen(value: boolean, options: { instant?: boolean } = {})
 	nestedParentTransitionCleanup = cleanup
 }
 
+function setNestedModalChildOpen(value: boolean) {
+	nestedModalChildOpen.value = value
+}
+
 function onNestedDrag(closeProgress: number) {
 	const content = contentElement.value
 	if (!content || !open.value) return
@@ -659,6 +664,7 @@ provideDrawerRootContext({
 	overlayElement,
 	isDragging,
 	nestedChildOpen,
+	nestedModalChildOpen,
 	gestureClosing,
 	skipCloseAnimation,
 	shouldAnimateInitialOpen,
@@ -690,6 +696,7 @@ provideDrawerRootContext({
 	setGestureClosing,
 	setSkipCloseAnimation,
 	setNestedChildOpen,
+	setNestedModalChildOpen,
 	onNestedDrag,
 	onNestedRelease,
 	resetInteractiveState,
@@ -871,7 +878,16 @@ watch(open, (isOpen) => {
 	restoreBodyPointerEvents()
 }, { immediate: true })
 
+// A modal nested child owns focus while it is open: its parent's focus trap steps aside (DrawerContent). A
+// non-modal child has no trap of its own, so the parent keeps containing focus.
+watch(() => props.nested && open.value && props.modal, (isModalChildOpen) => {
+	parentContext?.setNestedModalChildOpen(isModalChildOpen)
+}, { immediate: true })
+
 onBeforeUnmount(() => {
+	if (props.nested) {
+		parentContext?.setNestedModalChildOpen(false)
+	}
 	if (typeof window !== 'undefined') {
 		window.removeEventListener('resize', handleSnapPointViewportResize)
 		window.visualViewport?.removeEventListener('resize', handleSnapPointViewportResize)
