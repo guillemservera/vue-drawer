@@ -121,6 +121,7 @@ import {
 | `closeThreshold` | `number` | `0.25` |
 | `scrollLockTimeout` | `number` | `500` |
 | `nested` | `boolean` | `false` |
+| `scaleParent` | `boolean` | `undefined` |
 | `preventScrollRestoration` | `boolean` | `false` |
 | `snapToSequentialPoint` | `boolean` | `false` |
 | `snapPoints` | `Array<number \| string>` | `undefined` |
@@ -129,6 +130,8 @@ import {
 | `fadeFromIndex` | `number` | last snap point |
 
 Use `DrawerRootNested` instead of setting `nested` manually for nested drawers.
+
+`scaleParent` (nested drawers only) decides whether the parent drawer scales back and follows this drawer's drag while it is open. Unset, the parent scales only when both drawers open from the same direction, a sheet stacked on a sheet. A bottom sheet opened over a side drawer leaves the side drawer as it is. Set it to `true` or `false` to force either. Focus ownership and closing behave the same either way.
 
 On iOS Safari, `preventScroll` pins `<body>` with `position: fixed` while the drawer is open. On close, the page scroll is restored in the same task that unpins the body, with `behavior: 'instant'`, so it neither flashes the top of the page nor animates under `scroll-behavior: smooth`. With `preventScrollRestoration`, the restore waits one frame to detect a navigation triggered from inside the drawer (in that case it is skipped), so the top of the page can be visible for one frame.
 
@@ -164,7 +167,7 @@ Left and right drawers stay anchored at their fully open position when dragged a
 
 `animation` controls the open animation and `closeAnimation` controls normal non-gesture closes. The default slide motion matches Vaul's `500ms` duration and `cubic-bezier(0.32, 0.72, 0, 1)` easing for both drawer and overlay. For example, `animation="fade" closeAnimation="slide"` gives a fade-in and the classic slide-out close. Drag gestures still follow the pointer and close with transform. The fade defaults are intentionally quick (`260ms` in, `180ms` out) with no movement, and can be tuned with CSS variables such as `--drawer-fade-enter-duration`, `--drawer-fade-leave-duration`, `--drawer-fade-ease`, and `--drawer-fade-enter-offset`.
 
-`DrawerTitle` and `DrawerDescription` automatically register generated IDs with `DrawerContent`, which sets `aria-labelledby` and `aria-describedby` unless you provide those attributes yourself. `DrawerTrigger` renders an accessible button with `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls`. `DrawerClose` renders a button that closes the active root. Inside nested drawers, set `scope="all"` to close the top-level root and let the nested stack clean itself up. Opening a nested drawer adds Vaul-style depth only to the direct parent drawer content; VueDrawer does not scale the page background globally.
+`DrawerTitle` and `DrawerDescription` automatically register generated IDs with `DrawerContent`, which sets `aria-labelledby` and `aria-describedby` unless you provide those attributes yourself. `DrawerTrigger` renders an accessible button with `aria-haspopup="dialog"`, `aria-expanded`, and `aria-controls`. `DrawerClose` renders a button that closes the active root. Inside nested drawers, set `scope="all"` to close the top-level root and let the nested stack clean itself up. Opening a nested drawer adds Vaul-style depth only to the direct parent drawer content, by default only when both open from the same direction (`scaleParent`); VueDrawer does not scale the page background globally.
 
 `DrawerTrigger` and `DrawerClose` support `as` for changing the rendered element and `asChild` for merging drawer behavior into their only child. Use `asChild` when wrapping a design-system button so the DOM keeps a single interactive element instead of nesting a button inside another button.
 

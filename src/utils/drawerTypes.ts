@@ -44,6 +44,12 @@ export interface DrawerRootProps {
 	closeThreshold?: number
 	scrollLockTimeout?: number
 	nested?: boolean
+	/**
+	 * Nested drawers only: whether the parent drawer scales back (and follows this drawer's drag) while it is open.
+	 * Unset, it does only when both drawers open from the same direction, a sheet stacked on a sheet; a bottom sheet
+	 * over a side drawer leaves the side drawer as it is.
+	 */
+	scaleParent?: boolean
 	preventScrollRestoration?: boolean
 	snapToSequentialPoint?: boolean
 	snapPoints?: DrawerSnapPoint[]
@@ -110,6 +116,8 @@ export interface DrawerRootContext {
 	nestedChildOpen: Ref<boolean>
 	/** A modal nested child drawer is open: it owns focus, so this content's focus trap steps aside. */
 	nestedModalChildOpen: Ref<boolean>
+	/** Nested drawers: this drawer scales its parent back while open (`scaleParent`). */
+	scalesParent: Readonly<Ref<boolean>>
 	gestureClosing: Ref<boolean>
 	skipCloseAnimation: Ref<boolean>
 	shouldAnimateInitialOpen: Ref<boolean>

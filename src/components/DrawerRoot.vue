@@ -47,6 +47,8 @@ const props = withDefaults(defineProps<DrawerRootProps>(), {
 	closeThreshold: DRAWER_DEFAULT_CLOSE_THRESHOLD,
 	scrollLockTimeout: DRAWER_DEFAULT_SCROLL_LOCK_TIMEOUT,
 	nested: false,
+	// `undefined` keeps "unset" distinct from `false`: Vue casts an absent Boolean prop to false.
+	scaleParent: undefined,
 	preventScrollRestoration: false,
 	snapToSequentialPoint: false,
 	snapPoints: undefined,
@@ -72,6 +74,7 @@ const closeAnimationOverride = ref<DrawerAnimation | null>(null)
 const preventCloseAutoFocusOnce = ref(false)
 const nestedChildOpen = ref(false)
 const nestedModalChildOpen = ref(false)
+const scalesParent = computed(() => props.nested && (props.scaleParent ?? parentContext?.direction.value === props.direction))
 const drawerId = createDrawerId(props.direction, props.nested)
 const domIdBase = `vuedrawer-${drawerId.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}`
 const defaultContentId = `${domIdBase}-content`
@@ -665,6 +668,7 @@ provideDrawerRootContext({
 	isDragging,
 	nestedChildOpen,
 	nestedModalChildOpen,
+	scalesParent,
 	gestureClosing,
 	skipCloseAnimation,
 	shouldAnimateInitialOpen,
@@ -845,7 +849,7 @@ onMounted(() => {
 
 watch(open, (isOpen) => {
 	if (isOpen) {
-		if (props.nested) {
+		if (scalesParent.value) {
 			parentContext?.setNestedChildOpen(true)
 		}
 
