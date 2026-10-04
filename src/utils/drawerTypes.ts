@@ -108,6 +108,8 @@ export interface DrawerRootContext {
 	isDragging: Ref<boolean>
 	/** A nested child drawer is open: this content is scaled behind it and follows its drag. */
 	nestedChildOpen: Ref<boolean>
+	/** A modal nested child drawer is open: it owns focus, so this content's focus trap steps aside. */
+	nestedModalChildOpen: Ref<boolean>
 	gestureClosing: Ref<boolean>
 	skipCloseAnimation: Ref<boolean>
 	shouldAnimateInitialOpen: Ref<boolean>
@@ -139,6 +141,7 @@ export interface DrawerRootContext {
 	setGestureClosing: (value: boolean) => void
 	setSkipCloseAnimation: (value: boolean) => void
 	setNestedChildOpen: (value: boolean, options?: { instant?: boolean }) => void
+	setNestedModalChildOpen: (value: boolean) => void
 	onNestedDrag: (closeProgress: number) => void
 	onNestedRelease: (isStillOpen: boolean) => void
 	resetInteractiveState: () => void
