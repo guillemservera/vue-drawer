@@ -114,6 +114,35 @@ const CloseScopeHarness = defineComponent({
 	`,
 })
 
+const FocusHarness = defineComponent({
+	components: {
+		DrawerContent,
+		DrawerRoot,
+		DrawerRootNested,
+	},
+	setup() {
+		const open = ref(true)
+		const childOpen = ref(false)
+
+		return {
+			open,
+			childOpen,
+		}
+	},
+	template: `
+		<DrawerRoot v-model:open="open">
+			<DrawerContent aria-label="Parent drawer">
+				<button class="parent-button">Parent</button>
+			</DrawerContent>
+			<DrawerRootNested v-model:open="childOpen">
+				<DrawerContent aria-label="Nested drawer">
+					<select class="child-select"><option>One</option></select>
+				</DrawerContent>
+			</DrawerRootNested>
+		</DrawerRoot>
+	`,
+})
+
 describe('DrawerRootNested', () => {
 	it('forces nested drawers closed when the parent drawer closes', async () => {
 		const wrapper = mount(Harness)
@@ -247,6 +276,42 @@ describe('DrawerRootNested', () => {
 		expect(childContent.style.transition).toContain('1ms')
 		expect(childOverlay.style.transition).toContain('1ms')
 
+		wrapper.unmount()
+	})
+
+	it('leaves focus inside an open nested drawer to the nested drawer', async () => {
+		const wrapper = mount(FocusHarness, { attachTo: document.body })
+		await nextTick()
+
+		;(wrapper.vm as unknown as { childOpen: boolean }).childOpen = true
+		await nextTick()
+		await nextTick()
+
+		// The child's content is outside the parent's: a portal in real use.
+		// The parent's trap must not take focus at all: even a round trip (parent, then the child's trap pulling it
+		// back) closes a native select's picker as it opens.
+		const select = document.querySelector<HTMLSelectElement>('.child-select')!
+		const parentButton = document.querySelector<HTMLButtonElement>('.parent-button')!
+		const parentFocus = vi.fn()
+		parentButton.addEventListener('focus', parentFocus)
+		select.focus()
+		await Promise.resolve()
+		await Promise.resolve()
+		expect(parentFocus).not.toHaveBeenCalled()
+		expect(document.activeElement).toBe(select)
+		parentButton.removeEventListener('focus', parentFocus)
+
+		// Once the child closes, the parent traps focus again.
+		;(wrapper.vm as unknown as { childOpen: boolean }).childOpen = false
+		await nextTick()
+		const outside = document.createElement('button')
+		document.body.append(outside)
+		outside.focus()
+		await Promise.resolve()
+		await Promise.resolve()
+		expect(document.activeElement).toBe(parentButton)
+
+		outside.remove()
 		wrapper.unmount()
 	})
 })
