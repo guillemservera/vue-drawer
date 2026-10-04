@@ -46,6 +46,7 @@ const rootContext = vi.hoisted(() => {
 		isDragging: box(false),
 		nestedChildOpen: box(false),
 		nestedModalChildOpen: box(false),
+		scalesParent: box(false),
 		gestureClosing: box(false),
 			preventCloseAutoFocusOnce: box(false),
 			requestOpenChange: vi.fn(),

@@ -81,6 +81,43 @@ const NestedInstantHarness = defineComponent({
 	`,
 })
 
+// The parent's direction and the child's `scaleParent` vary per test.
+function scaleHarness(parentDirection: string, scaleParent?: boolean) {
+	return defineComponent({
+		components: {
+			ContextProbe,
+			DrawerContent,
+			DrawerOverlay,
+			DrawerRoot,
+			DrawerRootNested,
+		},
+		setup() {
+			return { childOpen: ref(true), parentDirection, scaleParent }
+		},
+		template: `
+			<DrawerRoot :open="true" :direction="parentDirection">
+				<DrawerOverlay />
+				<DrawerContent aria-label="Parent drawer" />
+				<ContextProbe />
+				<DrawerRootNested v-model:open="childOpen" :scale-parent="scaleParent">
+					<DrawerOverlay />
+					<DrawerContent aria-label="Nested drawer" />
+				</DrawerRootNested>
+			</DrawerRoot>
+		`,
+	})
+}
+
+async function parentContentFor(parentDirection: string, scaleParent?: boolean) {
+	const wrapper = mount(scaleHarness(parentDirection, scaleParent), {
+		attachTo: document.body,
+		global: { stubs: { Transition: false } },
+	})
+	await nextTick()
+	const probe = wrapper.findComponent(ContextProbe).vm.$.exposed as { root: ReturnType<typeof useDrawerRootContext> }
+	return { wrapper, content: probe.root.contentElement.value!, root: probe.root }
+}
+
 const CloseScopeHarness = defineComponent({
 	components: {
 		DrawerClose,
@@ -335,6 +372,35 @@ describe('DrawerRootNested', () => {
 		expect(document.activeElement).toBe(document.querySelector('.parent-button'))
 
 		outside.remove()
+		wrapper.unmount()
+	})
+
+	it('leaves a parent opening from another side unscaled by default', async () => {
+		const { wrapper, content, root } = await parentContentFor('left')
+
+		expect(root.nestedChildOpen.value).toBe(false)
+		expect(content.style.transform).not.toContain('scale(')
+		expect(content.classList.contains('drawer-content--nested-parent')).toBe(false)
+		// Still nested for focus: the modal child owns it.
+		expect(root.nestedModalChildOpen.value).toBe(true)
+
+		wrapper.unmount()
+	})
+
+	it('scales a parent opening from another side when scaleParent is true', async () => {
+		const { wrapper, content } = await parentContentFor('left', true)
+
+		expect(content.style.transform).toContain('scale(')
+
+		wrapper.unmount()
+	})
+
+	it('leaves a same-side parent unscaled when scaleParent is false', async () => {
+		const { wrapper, content, root } = await parentContentFor('bottom', false)
+
+		expect(root.nestedChildOpen.value).toBe(false)
+		expect(content.style.transform).not.toContain('scale(')
+
 		wrapper.unmount()
 	})
 })
