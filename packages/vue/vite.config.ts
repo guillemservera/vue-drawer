@@ -23,7 +23,6 @@ export default defineConfig(({ command }) => ({
     }),
   ],
   build: {
-    minify: 'esbuild',
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       fileName: 'index',
@@ -33,9 +32,6 @@ export default defineConfig(({ command }) => ({
     reportCompressedSize: true,
     rollupOptions: {
       external: ['vue'],
-      output: {
-        compact: true,
-      },
     },
   },
   css: {

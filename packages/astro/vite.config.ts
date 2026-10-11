@@ -18,7 +18,6 @@ export default defineConfig({
 		}),
 	],
 	build: {
-		minify: 'esbuild',
 		target: 'es2022',
 		lib: {
 			entry: resolve(__dirname, 'src/index.ts'),
@@ -27,10 +26,5 @@ export default defineConfig({
 			formats: ['es'],
 		},
 		reportCompressedSize: true,
-		rollupOptions: {
-			output: {
-				compact: true,
-			},
-		},
 	},
 })
