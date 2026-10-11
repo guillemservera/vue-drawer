@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue'
 import { useDrawerRootContext } from '../utils/drawerContext'
-import { isOutsidePressOwnedByNestedLayer } from '../utils/drawerDom'
-import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
+import {
+	isOutsidePressOwnedByNestedLayer,
+	suppressNextClickAfterPointerDismiss,
+} from '@guillemservera/drawer-core'
 
 defineOptions({
 	inheritAttrs: false,

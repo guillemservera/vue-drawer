@@ -6,7 +6,7 @@ import {
 	getSnapPointOffsets,
 	resolveSnapPointSize,
 	resolveSnapPointTarget,
-} from '../src/utils/drawerSnapPoints'
+} from '../src/drawerSnapPoints'
 
 describe('drawerSnapPoints', () => {
 	it('resolves percentage and pixel snap points against the snap axis size', () => {

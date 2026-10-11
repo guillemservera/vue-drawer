@@ -1,0 +1,18 @@
+{
+  "name": "@guillemservera/drawer-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-agnostic drawer logic shared by the drawer packages. Not published: bundled into each framework package.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "ci": "pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.2"
+  }
+}

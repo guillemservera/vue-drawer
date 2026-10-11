@@ -8,6 +8,9 @@
     "paths": {
       "@guillemservera/vue-drawer": [
         "./src/index.ts"
+      ],
+      "@guillemservera/drawer-core": [
+        "../core/src/index.ts"
       ]
     },
     "strict": true,

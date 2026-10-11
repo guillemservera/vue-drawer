@@ -1,6 +1,6 @@
 import { watch } from 'vue'
 import type { Ref } from 'vue'
-import { hideElementsOutside } from '../utils/drawerAria'
+import { hideElementsOutside } from '@guillemservera/drawer-core'
 
 interface UseDrawerAriaIsolationOptions {
 	contentElement: Ref<HTMLElement | null>

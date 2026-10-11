@@ -8,6 +8,8 @@ export default defineConfig(({ command }) => ({
   resolve: {
     alias: {
       '@guillemservera/vue-drawer': resolve(__dirname, 'src/index.ts'),
+      // Private workspace package, bundled into dist (never a runtime dependency).
+      '@guillemservera/drawer-core': resolve(__dirname, '../core/src/index.ts'),
     },
   },
   plugins: [

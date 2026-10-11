@@ -8,12 +8,16 @@ import {
 	DRAWER_DEFAULT_SCROLL_LOCK_TIMEOUT,
 	DRAWER_DEFAULT_TRANSITION_DURATION_MS,
 	DRAWER_EASE,
+	getActiveSnapPointIndex,
 	getNestedParentTransform,
+	getOverlayOpacityForOffset,
+	getSnapPointOffsets,
 	getTranslateStyles,
-} from '../utils/drawerConstants'
+	restoreBodyPointerEvents,
+	scheduleBodyPointerEventsRestore,
+	waitForDrawerTransition,
+} from '@guillemservera/drawer-core'
 import { provideDrawerRootContext, useOptionalDrawerRootContext } from '../utils/drawerContext'
-import { restoreBodyPointerEvents, scheduleBodyPointerEventsRestore, waitForDrawerTransition } from '../utils/drawerDom'
-import { getActiveSnapPointIndex, getOverlayOpacityForOffset, getSnapPointOffsets } from '../utils/drawerSnapPoints'
 import type { DrawerAnimation, DrawerRootEmits, DrawerRootProps, DrawerSnapPoint } from '../utils/drawerTypes'
 import { useDrawerInputReposition } from '../composables/useDrawerInputReposition'
 import { useDrawerScrollLock } from '../composables/useDrawerScrollLock'

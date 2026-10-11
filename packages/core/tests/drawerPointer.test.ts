@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getPointerPagePosition, resolvePointerDragIntent } from '../src/utils/drawerPointer'
+import { getPointerPagePosition, resolvePointerDragIntent } from '../src/drawerPointer'
 
 describe('drawerPointer', () => {
 	it('prefers page coordinates when available', () => {

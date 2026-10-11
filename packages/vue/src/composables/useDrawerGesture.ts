@@ -1,18 +1,22 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import {
-	DRAWER_DRAG_ACTIVATION_PX,
-	DRAWER_VELOCITY_THRESHOLD,
 	dampenValue,
+	DRAWER_DRAG_ACTIVATION_PX,
+	DRAWER_RECENT_OPEN_WINDOW_MS,
+	DRAWER_VELOCITY_THRESHOLD,
 	getAxisDistance,
 	getCloseDirectionSign,
 	getClosedTransform,
+	getOverlayOpacityForOffset,
+	getPointerPagePosition,
 	getTranslateStyles,
 	isVerticalDrawer,
-} from '../utils/drawerConstants'
-import { DRAWER_RECENT_OPEN_WINDOW_MS, restoreBodyPointerEvents, waitForDrawerTransition } from '../utils/drawerDom'
-import { getPointerPagePosition, resolvePointerDragIntent } from '../utils/drawerPointer'
-import { getOverlayOpacityForOffset, resolveSnapPointTarget } from '../utils/drawerSnapPoints'
+	resolvePointerDragIntent,
+	resolveSnapPointTarget,
+	restoreBodyPointerEvents,
+	waitForDrawerTransition,
+} from '@guillemservera/drawer-core'
 import type { DrawerDirection } from '../utils/drawerTypes'
 
 interface UseDrawerGestureOptions {

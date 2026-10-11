@@ -7,7 +7,7 @@ import {
 	restoreBodyPointerEvents,
 	scheduleBodyPointerEventsRestore,
 	waitForDrawerTransition,
-} from '../src/utils/drawerDom'
+} from '../src/drawerDom'
 
 function createTransitionEndEvent(propertyName: string) {
 	const event = new Event('transitionend')

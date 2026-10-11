@@ -1,7 +1,9 @@
 import { nextTick, onBeforeUnmount, watch } from 'vue'
 import type { Ref } from 'vue'
-import { focusWithDrawerMarker } from '../utils/drawerDom'
-import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
+import {
+	focusWithDrawerMarker,
+	isElementInsideDrawerBranch,
+} from '@guillemservera/drawer-core'
 
 interface UseDrawerFocusScopeOptions {
 	contentElement: Ref<HTMLElement | null>

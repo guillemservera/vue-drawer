@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@guillemservera/vue-drawer': fileURLToPath(new URL('../src/index.ts', import.meta.url)),
+      '@guillemservera/drawer-core': fileURLToPath(new URL('../../core/src/index.ts', import.meta.url)),
     },
   },
 })

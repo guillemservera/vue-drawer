@@ -4,9 +4,11 @@ import type {
 	DrawerFocusOutsideEvent,
 	DrawerPointerDownOutsideEvent,
 } from '../utils/drawerTypes'
-import { isOutsidePressOwnedByNestedLayer } from '../utils/drawerDom'
-import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
-import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
+import {
+	isElementInsideDrawerBranch,
+	isOutsidePressOwnedByNestedLayer,
+	suppressNextClickAfterPointerDismiss,
+} from '@guillemservera/drawer-core'
 
 interface DrawerLayer {
 	id: string

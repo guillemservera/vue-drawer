@@ -5,7 +5,7 @@ import {
 	getNestedParentTransform,
 	getTranslateStyles,
 	isVerticalDrawer,
-} from '../src/utils/drawerConstants'
+} from '../src/drawerConstants'
 
 describe('drawerConstants', () => {
 	it('maps directions to the correct close sign', () => {

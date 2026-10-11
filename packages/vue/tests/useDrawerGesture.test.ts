@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent, nextTick, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getClosedTransform, getTranslateStyles } from '../src/utils/drawerConstants'
+import { getClosedTransform, getTranslateStyles } from '@guillemservera/drawer-core'
 import { useDrawerGesture } from '../src/composables/useDrawerGesture'
 
 const {
@@ -39,8 +39,8 @@ const {
 	}
 })
 
-vi.mock('../src/utils/drawerDom', async () => {
-	const actual = await vi.importActual<typeof import('../src/utils/drawerDom')>('../src/utils/drawerDom')
+vi.mock('@guillemservera/drawer-core', async () => {
+	const actual = await vi.importActual<typeof import('@guillemservera/drawer-core')>('@guillemservera/drawer-core')
 	return {
 		...actual,
 		waitForDrawerTransition: waitForDrawerTransitionMock,

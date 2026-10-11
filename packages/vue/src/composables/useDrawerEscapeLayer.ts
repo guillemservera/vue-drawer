@@ -1,5 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
-import { isElementInsideDrawerBranch } from '../utils/drawerSelectors'
+import { isElementInsideDrawerBranch } from '@guillemservera/drawer-core'
 
 interface DrawerEscapeLayer {
 	id: string
