@@ -1,6 +1,6 @@
 packages:
-  - "."
-  - "playground"
+  - "packages/*"
+  - "packages/vue/playground"
 
 onlyBuiltDependencies:
   - esbuild

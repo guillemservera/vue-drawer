@@ -1,82 +1,11 @@
 {
-  "name": "@guillemservera/vue-drawer",
-  "version": "0.3.0",
-  "description": "A headless, unstyled and behaviorally opinionated drawer primitive for Vue 3 with gestures, snap points, nested drawers and zero runtime dependencies.",
+  "name": "drawer",
+  "private": true,
   "type": "module",
   "packageManager": "pnpm@10.17.1",
-  "license": "MIT",
-  "author": "Guillem Servera",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/guillemservera/vue-drawer.git"
-  },
-  "bugs": {
-    "url": "https://github.com/guillemservera/vue-drawer/issues"
-  },
-  "homepage": "https://github.com/guillemservera/vue-drawer#readme",
-  "sideEffects": [
-    "**/*.css"
-  ],
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./style.css": "./dist/style.css"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependencies": {
-    "vue": "^3.4.0 || ^3.5.0"
-  },
-  "devDependencies": {
-    "@microsoft/api-extractor": "^7.59.2",
-    "@types/node": "^22.20.4",
-    "@vitejs/plugin-vue": "^6.0.9",
-    "@vue/language-core": "^3.3.11",
-    "@vue/test-utils": "^2.5.1",
-    "jsdom": "^30.1.1",
-    "publint": "0.3.24",
-    "typescript": "^5.9.3",
-    "uqr": "^0.1.3",
-    "vite": "^6.4.3",
-    "vite-plugin-dts": "^5.1.1",
-    "vitest": "^5.0.2",
-    "vue": "^3.5.43",
-    "vue-tsc": "^3.3.11"
-  },
-  "keywords": [
-    "vue",
-    "vue3",
-    "drawer",
-    "bottom-sheet",
-    "sheet",
-    "modal",
-    "headless",
-    "unstyled",
-    "gestures",
-    "snap-points",
-    "nested-drawers"
-  ],
   "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "dev:playground": "pnpm --filter @vue-drawer/playground dev",
-    "build": "vue-tsc --noEmit -p tsconfig.build.json && vite build",
-    "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "publint": "publint",
-    "pack:dry": "npm pack --dry-run",
-    "ci": "pnpm typecheck && pnpm test && pnpm build && pnpm publint && pnpm pack:dry",
-    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build && pnpm publint"
+    "dev": "pnpm --filter @guillemservera/vue-drawer dev",
+    "test": "pnpm -r test",
+    "ci": "pnpm -r --workspace-concurrency=1 run ci"
   }
 }
