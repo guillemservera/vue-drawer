@@ -23,7 +23,7 @@ The CI command runs type checking, tests, the production build, package linting 
 
 - Keep changes focused and explain the user-visible behavior.
 - Add or update a regression test for behavior changes.
-- Update the README when the public API or supported behavior changes.
+- Update `packages/vue/README.md` when the public API or supported behavior changes.
 - Document browser-specific behavior when it affects consumers.
 - Do not commit generated `dist`, coverage or playground output files.
 - Keep the public package contract compatible unless the change is intentional and documented.
@@ -44,9 +44,9 @@ Contributors only need the development and pull-request steps above. Repository 
 
 ### Releasing a version
 
-1. Bump `version` in `package.json` in a pull request (`chore(release): x.y.z`) and merge it after the required CI checks pass.
+1. Bump `version` in `packages/vue/package.json` in a pull request (`chore(release): x.y.z`) and merge it after the required CI checks pass.
 2. Publish a GitHub release with tag `vx.y.z` on that merged commit. The tag must match the package version exactly, including any prerelease suffix.
-3. `.github/workflows/release.yml` verifies that the release commit belongs to `origin/main` and that the tag matches `package.json` before installing dependencies or running package code. Its build job has no OIDC permission, runs the full `pnpm run ci`, and produces and validates a real package tarball.
+3. `.github/workflows/release.yml` verifies that the release commit belongs to `origin/main` and that the tag matches `packages/vue/package.json` before installing dependencies or running package code. Its build job has no OIDC permission, runs the full `pnpm run ci`, and produces and validates a real package tarball.
 4. Review the successful build and approve the `npm` environment deployment. Its staging job downloads that exact artifact by ID, checks its SHA-256 digest and stages the tarball with npm 12, provenance and lifecycle scripts disabled. It does not check out source or rebuild. GitHub prereleases and versions with prerelease suffixes use `next`; other releases use `latest`.
 5. Inspect the workflow and staged package (`npm stage view <id>`; use `npm stage download <id>` to inspect its contents). Approve with 2FA on npmjs.com (package → Staged) or with `npm stage approve <id>`; only then is the version published. Reject an unexpected package with `npm stage reject <id>` instead.
 

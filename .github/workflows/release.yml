@@ -1,6 +1,7 @@
 name: Release
 
-# Stages an npm release when a GitHub release is published (tag vX.Y.Z matching package.json).
+# Stages an npm release when a GitHub release is published (tag vX.Y.Z matching packages/vue/package.json).
+# Only @guillemservera/vue-drawer is released from here; any other tag fails the version check below.
 # Auth: npm Trusted Publishing (OIDC) — no NPM_TOKEN. The trusted publisher only allows
 # `npm stage publish`: the version goes live after a maintainer approves it with 2FA
 # (npmjs.com → package → Staged, or `npm stage approve <id>`), so CI alone can never ship.
@@ -43,9 +44,9 @@ jobs:
             echo "::error::Release commit must belong to origin/main"
             exit 1
           fi
-          version="$(jq -er '.version | select(type == "string")' package.json)"
+          version="$(jq -er '.version | select(type == "string")' packages/vue/package.json)"
           if [ "$RELEASE_TAG" != "v${version}" ]; then
-            echo "::error::Release tag does not match package.json version"
+            echo "::error::Release tag does not match packages/vue/package.json version"
             exit 1
           fi
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -60,6 +61,7 @@ jobs:
       - run: pnpm run ci
       - name: Pack and validate release tarball
         id: pack
+        working-directory: packages/vue
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
