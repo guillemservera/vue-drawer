@@ -1,5 +1,7 @@
 ---
-const { title, filler = true } = Astro.props
+import { ClientRouter } from 'astro:transitions'
+
+const { title, filler = true, router = false } = Astro.props
 ---
 
 <html lang="en">
@@ -7,6 +9,7 @@ const { title, filler = true } = Astro.props
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<title>{title} · astro-drawer</title>
+		{router && <ClientRouter />}
 		<style is:global>
 			:root { color-scheme: light dark; font: 17px/1.5 system-ui, sans-serif; }
 			body { margin: 0; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left)); }

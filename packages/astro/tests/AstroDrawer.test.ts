@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AstroDrawer } from '../src/index'
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0))
@@ -13,8 +13,15 @@ function mount(attrs = '') {
 	return { drawer, dialog }
 }
 
+// Only `Date` is faked: vue's drag guards (recently opened, scroll-lock timeout) read it, and a drag in a test starts right after opening.
+beforeEach(() => {
+	vi.useFakeTimers({ toFake: ['Date'] })
+})
+
 function pointer(target: Element, type: string, y: number, timeStamp: number, x = 0) {
-	const event = new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 })
+	// Each press comes after the guards' windows, unless a test says otherwise by pressing twice within one `timeStamp` window.
+	if (type === 'pointerdown') vi.setSystemTime(Date.now() + 600)
+	const event = new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0, isPrimary: true })
 	Object.defineProperty(event, 'timeStamp', { value: timeStamp })
 	target.dispatchEvent(event)
 }
@@ -25,6 +32,7 @@ afterEach(async () => {
 	document.body.innerHTML = ''
 	await flush()
 	vi.restoreAllMocks()
+	vi.useRealTimers()
 })
 
 describe('astro-drawer', () => {
@@ -259,9 +267,9 @@ describe('astro-drawer', () => {
 		})
 
 		it('lets sidebars pan vertically and non-scrolling sheets block panning', () => {
-			expect(mount('open direction="left"').dialog.style.touchAction).toBe('pan-y')
-			expect(mount('open direction="top"').dialog.style.touchAction).toBe('none')
-			expect(mount('open').dialog.style.touchAction).toBe('none')
+			expect(mount('open direction="left"').dialog.style.touchAction).toBe('pan-y pinch-zoom')
+			expect(mount('open direction="top"').dialog.style.touchAction).toBe('pinch-zoom')
+			expect(mount('open').dialog.style.touchAction).toBe('pinch-zoom')
 		})
 
 		it('lets content scrolled away from the closing edge keep the gesture', () => {
@@ -403,6 +411,21 @@ describe('astro-drawer', () => {
 			expect(document.body.style.top).toBe('')
 			Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
 		})
+
+		it('does not scroll the next page when a client router swapped the body while it was pinned', () => {
+			vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
+			vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('iPhone')
+			window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as typeof window.matchMedia
+			Object.defineProperty(window, 'scrollY', { configurable: true, value: 250 })
+			const scrollTo = vi.spyOn(window, 'scrollTo')
+
+			mount('open')
+			expect(document.body.style.position).toBe('fixed')
+			document.documentElement.replaceChild(document.createElement('body'), document.body) // the router's swap
+			expect(scrollTo).not.toHaveBeenCalled()
+			expect(document.body.style.position).toBe('')
+			Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
+		})
 	})
 
 	describe('snap points', () => {
@@ -430,11 +453,11 @@ describe('astro-drawer', () => {
 			expect(mount('open').dialog.style.getPropertyValue('--drawer-rest')).toBe('translateY(0px)')
 		})
 
-		it('measures a right sidebar on the viewport width; top and left drawers ignore snap points', () => {
+		it('measures sidebars on the viewport width and top sheets on its height, all hiding toward their own edge', () => {
 			const { dialog } = mount('open direction="right" snap-points="0.25, 1"')
 			expect(rest(dialog)).toBe('translateX(768px)') // 1024 - 256
-			expect(mount('open direction="left" snap-points="0.25, 1"').dialog.style.getPropertyValue('--drawer-rest')).toBe('translateX(0px)')
-			expect(mount('open direction="top" snap-points="0.25, 1"').dialog.style.getPropertyValue('--drawer-rest')).toBe('translateY(0px)')
+			expect(rest(mount('open direction="left" snap-points="0.25, 1"').dialog)).toBe('translateX(-768px)')
+			expect(rest(mount('open direction="top" snap-points="0.25, 1"').dialog)).toBe('translateY(-576px)') // 768 - 192
 		})
 
 		it('shows the backdrop from fade-from-index (default: the last snap point)', () => {
@@ -453,7 +476,7 @@ describe('astro-drawer', () => {
 			Object.defineProperty(dialog, 'scrollHeight', { configurable: true, value: 2000 })
 			Object.defineProperty(dialog, 'clientHeight', { configurable: true, value: 768 })
 			drawer.setAttribute('active-snap-point', '0.5')
-			expect(dialog.style.touchAction).toBe('none')
+			expect(dialog.style.touchAction).toBe('pinch-zoom')
 			drawer.setAttribute('active-snap-point', '0.9')
 			expect(dialog.style.touchAction).toBe('')
 		})

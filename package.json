@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev": "pnpm --filter @guillemservera/vue-drawer dev",
+    "dev:astro": "pnpm --filter @guillemservera/astro-drawer build && pnpm --filter @astro-drawer/playground dev",
     "test": "pnpm -r test",
     "ci": "pnpm -r --workspace-concurrency=1 run ci"
   }

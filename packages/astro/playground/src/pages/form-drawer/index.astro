@@ -4,12 +4,12 @@ import DemoLayout from '../../layouts/DemoLayout.astro'
 ---
 
 <DemoLayout title="Form drawer">
-	<p>The form sits in <code>[data-drawer-no-drag]</code>, so it never starts a drag. The first input is focused on open. The iOS keyboard repositioning from vue-drawer is not ported.</p>
+	<p>The form sits in <code>[data-drawer-no-drag]</code>, so it never starts a drag. <code>autoFocus</code> moves focus to the first control once the open transition is over (by default the sheet itself keeps it, like vue-drawer); <code>open-auto-focus</code> can cancel it. On iOS the sheet moves above the keyboard.</p>
 	<button class="tap" id="open" data-drawer-open="#drawer">Create alert</button>
-	<Drawer id="drawer" aria-labelledby="form-title">
+	<Drawer id="drawer" autoFocus aria-labelledby="form-title">
 		<h2 id="form-title">Create alert</h2>
 		<form data-drawer-no-drag onsubmit="event.preventDefault(); this.closest('astro-drawer').close()">
-			<label>Symbol <input id="symbol" name="symbol" autocomplete="off" autofocus /></label>
+			<label>Symbol <input id="symbol" name="symbol" autocomplete="off" /></label>
 			<label>Alert type
 				<select name="type"><option>Breakout</option><option>Pullback</option><option>Volatility</option></select>
 			</label>

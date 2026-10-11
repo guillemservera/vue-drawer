@@ -1,0 +1,56 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Handle, options and events">
+	<p>Tap the handle to move to the next snap point (a tap on the last one closes it); a double tap or a long press leaves it where it is. Every event the element announces is listed below.</p>
+	<button class="tap" id="open-cycle" data-drawer-open="#cycle">Handle cycling <small>0.25, 0.5, 0.9 · opens at 0.5</small></button>
+	<button class="tap" id="open-handle" data-drawer-open="#handle">Handle only <small><code>handleOnly</code>: only the handle drags</small></button>
+	<button class="tap" id="open-guard" data-drawer-open="#guard">Vetoed Escape <small>a listener cancels <code>escape-key-down</code> twice</small></button>
+	<button class="tap" id="open-threshold" data-drawer-open="#threshold">Close threshold <small><code>closeThreshold=0.6</code>: drag most of the way</small></button>
+	<h2>Event log</h2>
+	<pre id="log" aria-live="off" style="min-height: 8rem; max-height: 14rem; overflow: auto; font-size: 0.8rem;"></pre>
+
+	<Drawer id="cycle" snapPoints={[0.25, 0.5, 0.9]} defaultSnapPoint={0.5} aria-labelledby="cycle-title">
+		<h2 id="cycle-title">Handle cycling</h2>
+		<p>Active: <output>0.5</output></p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="handle" handleOnly aria-labelledby="handle-title">
+		<h2 id="handle-title">Handle only</h2>
+		<p>Dragging this content does nothing; dragging the handle does.</p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="guard" aria-labelledby="guard-title">
+		<h2 id="guard-title">Vetoed Escape</h2>
+		<p>The first two Escape presses are cancelled by a listener. Presses so far: <output>0</output></p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="threshold" closeThreshold={0.6} aria-labelledby="threshold-title">
+		<h2 id="threshold-title">Close threshold</h2>
+		<p>A slow drag has to cover 60% of the sheet to close it.</p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+</DemoLayout>
+
+<script>
+	const log = document.getElementById('log')!
+	const names = ['open-change', 'after-open', 'after-close', 'animation-end', 'snap-point-change', 'release', 'escape-key-down', 'pointer-down-outside', 'interact-outside', 'open-auto-focus', 'close-auto-focus']
+	const write = (id: string, type: string, detail: unknown) => {
+		const value = detail === undefined || detail instanceof Object ? '' : ` ${String(detail)}`
+		log.textContent = `${id}: ${type}${value}\n${log.textContent}`.split('\n').slice(0, 60).join('\n')
+	}
+	for (const drawer of document.querySelectorAll('astro-drawer')) {
+		for (const name of names) drawer.addEventListener(name, (event) => write(drawer.id, name, (event as CustomEvent).detail))
+		drawer.addEventListener('snap-point-change', (event) => {
+			drawer.querySelector('output')!.value = String((event as CustomEvent).detail)
+		})
+	}
+	let presses = 0
+	document.getElementById('guard')!.addEventListener('escape-key-down', (event) => {
+		const output = document.querySelector<HTMLOutputElement>('#guard output')!
+		output.value = String(++presses)
+		if (presses <= 2) event.preventDefault()
+	})
+</script>

@@ -14,10 +14,20 @@ interface DocumentScrollSnapshot {
 	scrollbarWidthProperty: string
 }
 
-let previousDocumentScroll: DocumentScrollSnapshot | null = null
-let previousDocumentOverscroll: DocumentOverscrollSnapshot | null = null
-let documentScrollLockCount = 0
-let documentOverscrollLockCount = 0
+// Bundled separately into every drawer package, so a page with a vue-drawer and an astro-drawer has two copies of this module:
+// the counters live on `globalThis`, or each copy would restore the page while the other still holds the lock.
+const stateKey = Symbol.for('@guillemservera/drawer-core/scroll-lock')
+const lockState = ((globalThis as Record<symbol, unknown>)[stateKey] ??= {
+	previousDocumentScroll: null,
+	previousDocumentOverscroll: null,
+	documentScrollLockCount: 0,
+	documentOverscrollLockCount: 0,
+}) as {
+	previousDocumentScroll: DocumentScrollSnapshot | null
+	previousDocumentOverscroll: DocumentOverscrollSnapshot | null
+	documentScrollLockCount: number
+	documentOverscrollLockCount: number
+}
 
 const nonTextInputTypes = new Set([
 	'checkbox',
@@ -74,10 +84,10 @@ function isKeyboardInput(target: EventTarget | null): target is HTMLElement {
 export function lockDocumentScroll() {
 	if (!canLockDocumentScroll()) return
 
-	if (documentScrollLockCount === 0) {
+	if (lockState.documentScrollLockCount === 0) {
 		const root = document.documentElement
 		const scrollbarWidth = Math.max(window.innerWidth - document.documentElement.clientWidth, 0)
-		previousDocumentScroll = {
+		lockState.previousDocumentScroll = {
 			htmlOverflow: root.style.overflow,
 			bodyOverflow: document.body.style.overflow,
 			bodyPaddingRight: document.body.style.paddingRight,
@@ -100,39 +110,39 @@ export function lockDocumentScroll() {
 		document.body.style.overflow = 'hidden'
 	}
 
-	documentScrollLockCount += 1
+	lockState.documentScrollLockCount += 1
 }
 
 export function restoreDocumentScroll() {
-	if (typeof document === 'undefined' || documentScrollLockCount === 0) return
+	if (typeof document === 'undefined' || lockState.documentScrollLockCount === 0) return
 
-	documentScrollLockCount = Math.max(documentScrollLockCount - 1, 0)
-	if (documentScrollLockCount > 0) return
-	if (!previousDocumentScroll) return
+	lockState.documentScrollLockCount = Math.max(lockState.documentScrollLockCount - 1, 0)
+	if (lockState.documentScrollLockCount > 0) return
+	if (!lockState.previousDocumentScroll) return
 
-	document.documentElement.style.overflow = previousDocumentScroll.htmlOverflow
-	document.body.style.overflow = previousDocumentScroll.bodyOverflow
-	document.body.style.paddingRight = previousDocumentScroll.bodyPaddingRight
-	if (previousDocumentScroll.htmlScrollbarGutter) {
-		document.documentElement.style.setProperty('scrollbar-gutter', previousDocumentScroll.htmlScrollbarGutter)
+	document.documentElement.style.overflow = lockState.previousDocumentScroll.htmlOverflow
+	document.body.style.overflow = lockState.previousDocumentScroll.bodyOverflow
+	document.body.style.paddingRight = lockState.previousDocumentScroll.bodyPaddingRight
+	if (lockState.previousDocumentScroll.htmlScrollbarGutter) {
+		document.documentElement.style.setProperty('scrollbar-gutter', lockState.previousDocumentScroll.htmlScrollbarGutter)
 	}
 	else {
 		document.documentElement.style.removeProperty('scrollbar-gutter')
 	}
-	if (previousDocumentScroll.scrollbarWidthProperty) {
-		document.documentElement.style.setProperty('--vuedrawer-scrollbar-width', previousDocumentScroll.scrollbarWidthProperty)
+	if (lockState.previousDocumentScroll.scrollbarWidthProperty) {
+		document.documentElement.style.setProperty('--vuedrawer-scrollbar-width', lockState.previousDocumentScroll.scrollbarWidthProperty)
 	}
 	else {
 		document.documentElement.style.removeProperty('--vuedrawer-scrollbar-width')
 	}
-	previousDocumentScroll = null
+	lockState.previousDocumentScroll = null
 }
 
 export function lockDocumentOverscroll() {
 	if (!canLockDocumentOverscroll()) return
 
-	if (documentOverscrollLockCount === 0) {
-		previousDocumentOverscroll = {
+	if (lockState.documentOverscrollLockCount === 0) {
+		lockState.previousDocumentOverscroll = {
 			htmlOverscrollBehaviorY: document.documentElement.style.overscrollBehaviorY,
 			bodyOverscrollBehaviorY: document.body.style.overscrollBehaviorY,
 		}
@@ -141,19 +151,19 @@ export function lockDocumentOverscroll() {
 		document.body.style.overscrollBehaviorY = 'none'
 	}
 
-	documentOverscrollLockCount += 1
+	lockState.documentOverscrollLockCount += 1
 }
 
 export function restoreDocumentOverscroll() {
-	if (!canLockDocumentOverscroll() || documentOverscrollLockCount === 0) return
+	if (!canLockDocumentOverscroll() || lockState.documentOverscrollLockCount === 0) return
 
-	documentOverscrollLockCount = Math.max(documentOverscrollLockCount - 1, 0)
-	if (documentOverscrollLockCount > 0) return
-	if (!previousDocumentOverscroll) return
+	lockState.documentOverscrollLockCount = Math.max(lockState.documentOverscrollLockCount - 1, 0)
+	if (lockState.documentOverscrollLockCount > 0) return
+	if (!lockState.previousDocumentOverscroll) return
 
-	document.documentElement.style.overscrollBehaviorY = previousDocumentOverscroll.htmlOverscrollBehaviorY
-	document.body.style.overscrollBehaviorY = previousDocumentOverscroll.bodyOverscrollBehaviorY
-	previousDocumentOverscroll = null
+	document.documentElement.style.overscrollBehaviorY = lockState.previousDocumentOverscroll.htmlOverscrollBehaviorY
+	document.body.style.overscrollBehaviorY = lockState.previousDocumentOverscroll.bodyOverscrollBehaviorY
+	lockState.previousDocumentOverscroll = null
 }
 
 function isScrollableElement(node: Element) {

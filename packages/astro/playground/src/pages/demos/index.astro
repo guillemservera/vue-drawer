@@ -7,7 +7,7 @@ import { demos, unsupported } from '../../demos'
 	<nav aria-label="Demos">
 		{demos.map(demo => <a class="tap" href={demo.href}>{demo.title}<small>{demo.description}</small></a>)}
 	</nav>
-	<h2>Not supported yet</h2>
+	<h2>Differences from vue-drawer</h2>
 	<ul>
 		{unsupported.map(item => <li><strong>{item.title}</strong>: {item.description}</li>)}
 	</ul>

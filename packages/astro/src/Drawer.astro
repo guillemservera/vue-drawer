@@ -3,37 +3,91 @@ import type { HTMLAttributes } from 'astro/types'
 // Relative path on purpose: this file ships as source and must only reach this package's built files.
 import '../dist/style.css'
 
+type Animation = 'slide' | 'fade'
 type Props = HTMLAttributes<'dialog'> & {
 	/** Edge the drawer slides in from. Default `'bottom'`. */
 	direction?: 'top' | 'bottom' | 'left' | 'right'
 	/** `false`: Escape, backdrop click and drag do not close it; `close()` and `[data-drawer-close]` still do. Default `true`. */
 	dismissible?: boolean
+	/** `false`: a non-modal drawer. The page stays interactive and the drawer stays open while it is used. Default `true`. */
+	modal?: boolean
 	/** vue's `snapPoints`, least to most visible: fractions of the viewport (`0.5`) or lengths (`'160px'`, `'18rem'`). */
 	snapPoints?: (number | string)[]
-	/** The snap point it opens at, one of `snapPoints`. Default: the first. */
+	/** The snap point it rests on, one of `snapPoints`. Default: `defaultSnapPoint`, else the first. */
 	activeSnapPoint?: number | string
+	/** The snap point it first opens at. Default: the first. */
+	defaultSnapPoint?: number | string
 	/** Snap point index from which the backdrop shows. Default: the last. */
 	fadeFromIndex?: number
 	/** Every release moves at most one snap point. Default `false`. */
 	snapToSequentialPoint?: boolean
+	/** Skip the close animation. Default `false`. */
+	instantClose?: boolean
+	/** Focus the first focusable control on open instead of the sheet itself. Default `false`. */
+	autoFocus?: boolean
+	/** Only the `[data-drawer-handle]` starts a drag. Default `false`. */
+	handleOnly?: boolean
+	/** Keep a focused input above the iOS keyboard (bottom modal sheets). Default `true`. */
+	repositionInputs?: boolean
+	/** With `repositionInputs`, shrink the sheet instead of raising it above the keyboard. Default `false`. */
+	fixed?: boolean
+	/** Selector of a positioned element (`position: relative`) a non-modal drawer lives in and measures its snap points against. */
+	container?: string
+	/** Lock page scrolling while open (modal drawers). Default `true`. */
+	preventScroll?: boolean
+	/** Keep the scroll guards but do not pin the body with `position: fixed`. Default `false`. */
+	noBodyStyles?: boolean
+	/** Do not restore the page scroll after a navigation started from inside the drawer. Default `false`. */
+	preventScrollRestoration?: boolean
+	/** Open animation. Default `'slide'`. */
+	animation?: Animation
+	/** Close animation (drags always close with the slide). Default `'slide'`. */
+	closeAnimation?: Animation
+	/** Fraction of the drawer a drag must cover to close it. Default `0.25`. */
+	closeThreshold?: number
+	/** Milliseconds after a scroll attempt during which a drag stays a scroll. Default `500`. */
+	scrollLockTimeout?: number
+	/** For nested drawers: force the parent to step back (`true`) or not (`false`). Default: only when both open from the same side. */
+	scaleParent?: boolean
 }
 
 // The drawer's own props belong to the custom element; everything else (aria-label, aria-labelledby, class...) to the sheet.
-const { id, open, direction, dismissible, snapPoints, activeSnapPoint, fadeFromIndex, snapToSequentialPoint, ...attrs } = Astro.props
+const {
+	id, open, direction, dismissible, modal, snapPoints, activeSnapPoint, defaultSnapPoint, fadeFromIndex, snapToSequentialPoint,
+	instantClose, autoFocus, handleOnly, repositionInputs, fixed, container, preventScroll, noBodyStyles, preventScrollRestoration,
+	animation, closeAnimation, closeThreshold, scrollLockTimeout, scaleParent, ...attrs
+} = Astro.props
 // Sidebars get no handle (they are dragged from anywhere); a top sheet's handle sits at its bottom edge.
 const handleFirst = !direction || direction === 'bottom'
-// Astro drops `false` attributes, so non-dismissible must render the string "false".
+// Astro drops `false` attributes, so a flag that defaults to true must render the string "false".
+const off = (value?: boolean) => value === false ? 'false' : undefined
 ---
 
 <astro-drawer
 	id={id}
 	open={open}
 	direction={handleFirst ? undefined : direction}
-	dismissible={dismissible === false ? 'false' : undefined}
-	snap-points={snapPoints?.join(',')}
+	dismissible={off(dismissible)}
+	modal={off(modal)}
+	snap-points={snapPoints?.length ? snapPoints.join(',') : undefined}
 	active-snap-point={activeSnapPoint}
+	default-snap-point={defaultSnapPoint}
 	fade-from-index={fadeFromIndex}
 	snap-to-sequential-point={snapToSequentialPoint}
+	instant-close={instantClose}
+	auto-focus={autoFocus}
+	handle-only={handleOnly}
+	reposition-inputs={off(repositionInputs)}
+	fixed={fixed}
+	container={container}
+	prevent-scroll={off(preventScroll)}
+	no-body-styles={noBodyStyles}
+	prevent-scroll-restoration={preventScrollRestoration}
+	animation={animation}
+	close-animation={closeAnimation}
+	close-threshold={closeThreshold}
+	scroll-lock-timeout={scrollLockTimeout}
+	scale-parent={scaleParent === undefined ? undefined : String(scaleParent)}
 >
 	<dialog {...attrs}>
 		{handleFirst && <div data-drawer-handle></div>}

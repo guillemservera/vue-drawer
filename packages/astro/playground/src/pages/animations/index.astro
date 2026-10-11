@@ -1,0 +1,30 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Animations">
+	<p>The default is a slide. <code>animation</code> and <code>closeAnimation</code> switch to a fade, a close button can pick its own with <code>data-drawer-animation</code>, and <code>instantClose</code> skips the close animation. Drag always closes with the slide.</p>
+	<button class="tap" id="open-fade" data-drawer-open="#fade">Fade in and out <small><code>animation="fade"</code></small></button>
+	<button class="tap" id="open-mixed" data-drawer-open="#mixed">Slide in, fade out <small><code>closeAnimation="fade"</code></small></button>
+	<button class="tap" id="open-pick" data-drawer-open="#pick">Per-button animation <small><code>data-drawer-animation</code></small></button>
+	<button class="tap" id="open-instant" data-drawer-open="#instant">Instant close <small><code>instantClose</code></small></button>
+
+	<Drawer id="fade" animation="fade" closeAnimation="fade" aria-labelledby="fade-title">
+		<h2 id="fade-title">Fade</h2>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="mixed" closeAnimation="fade" aria-labelledby="mixed-title">
+		<h2 id="mixed-title">Slide in, fade out</h2>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="pick" aria-labelledby="pick-title">
+		<h2 id="pick-title">Per-button animation</h2>
+		<button class="tap" id="pick-slide" data-drawer-close>Close with the slide</button>
+		<button class="tap" id="pick-fade" data-drawer-close data-drawer-animation="fade">Close with a fade</button>
+	</Drawer>
+	<Drawer id="instant" instantClose aria-labelledby="instant-title">
+		<h2 id="instant-title">Instant close</h2>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+</DemoLayout>

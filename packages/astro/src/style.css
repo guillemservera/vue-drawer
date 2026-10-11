@@ -17,14 +17,19 @@ astro-drawer > dialog {
 	--drawer-rest: none;
 	/* scale/translate: a parent drawer stepping back behind a nested one. */
 	transform-origin: top;
-	transition: var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
+	transition: var(--drawer-duration, 0.5s) var(--drawer-ease, cubic-bezier(0.32, 0.72, 0, 1));
 	transition-property: transform, scale, translate;
+}
+
+/* The sheet takes focus itself on open: a container, not a control, so no ring around all of it. */
+astro-drawer > dialog:focus-visible {
+	outline: none;
 }
 
 astro-drawer > dialog::backdrop {
 	background: var(--drawer-backdrop, rgb(0 0 0 / 0.4));
 	opacity: 0;
-	transition: opacity var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
+	transition: opacity var(--drawer-duration, 0.5s) var(--drawer-ease, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
 astro-drawer[direction='top'] > dialog {
@@ -61,22 +66,107 @@ astro-drawer[data-state='open'] > dialog {
 	transform: var(--drawer-rest);
 }
 
+/* Set inline during a drag; ::backdrop inherits custom properties from its dialog. */
 astro-drawer[data-state='open'] > dialog::backdrop {
-	opacity: 1;
+	opacity: var(--drawer-fade, 1);
 }
 
-astro-drawer[data-backdrop-hidden] > dialog::backdrop {
+astro-drawer[data-dragging] > dialog::backdrop {
+	transition: none;
+}
+
+/* Not while dragging: expanding from a hidden-backdrop snap point fades the backdrop in with the finger, like vue's. */
+astro-drawer[data-backdrop-hidden]:not([data-dragging]) > dialog::backdrop {
 	opacity: 0;
 }
 
-/* Snap points (bottom and right only) are measured on the viewport like vue's, so the sheet spans it along its axis. */
-astro-drawer[snap-points]:not([direction='top']) > dialog {
+/* Snap points are measured on the viewport like vue's, so the sheet spans it along its axis. */
+astro-drawer[snap-points]:not([direction='left'], [direction='right']) > dialog {
 	height: 100dvh;
 	max-height: none;
 }
 
-astro-drawer[snap-points][direction='right'] > dialog {
+astro-drawer[snap-points]:is([direction='left'], [direction='right']) > dialog {
 	width: 100vw;
+}
+
+/* The sheet rests partly off-screen: a spacer (height set from JS) lets scrolled content clear the hidden part. */
+astro-drawer[snap-points]:not([direction='top']):not([direction='left'], [direction='right']) > dialog::after {
+	content: '';
+	display: block;
+	height: var(--drawer-hidden, 0px);
+}
+
+astro-drawer[snap-points][direction='top'] > dialog::before {
+	content: '';
+	display: block;
+	flex: none;
+	height: var(--drawer-hidden, 0px);
+}
+
+/* A top sheet rests showing its far (bottom) end, so its content hugs it. `[open]`: display must not unhide a closed dialog. */
+astro-drawer[snap-points][direction='top'] > dialog[open] {
+	display: flex;
+	flex-direction: column;
+}
+
+astro-drawer[snap-points][direction='top'] > dialog > :first-child {
+	margin-top: auto;
+}
+
+/* Likewise a left sidebar rests showing its right end: the content keeps the sidebar width there. */
+astro-drawer[snap-points][direction='left'] > dialog {
+	padding-left: calc(100% - var(--drawer-width, min(20rem, 85vw)) + 1rem);
+}
+
+/* Non-modal drawers are not in the top layer: they position themselves, over the page or inside their container. */
+astro-drawer > dialog:not(:modal) {
+	position: fixed;
+	z-index: var(--drawer-z-index, 50);
+}
+
+/* The host fills the container and clips the resting-off-screen sheet, so it neither scrolls a `overflow: hidden` container when focused nor adds overflow to it. */
+astro-drawer[container][modal='false'] {
+	position: absolute;
+	inset: 0;
+	overflow: clip;
+	pointer-events: none;
+}
+
+astro-drawer[container] > dialog:not(:modal) {
+	position: absolute;
+	pointer-events: auto;
+}
+
+astro-drawer[container][snap-points] > dialog {
+	height: 100%;
+	width: 100%;
+}
+
+/* The sheet leaving is not interactive (vue's `[data-state='closed']`); `[open]` ties the container rule's specificity above, and this comes later. */
+astro-drawer:not([data-state='open']) > dialog[open] {
+	pointer-events: none;
+}
+
+/* Leaving: vue's `--drawer-close-duration` and `--drawer-close-ease`, which follow the opening ones unless set. */
+astro-drawer:not([data-state='open']) > dialog,
+astro-drawer:not([data-state='open']) > dialog::backdrop {
+	transition-duration: var(--drawer-close-duration, var(--drawer-duration, 0.5s));
+	transition-timing-function: var(--drawer-close-ease, var(--drawer-ease, cubic-bezier(0.32, 0.72, 0, 1)));
+}
+
+/* vue's `animation="fade"`: the sheet stays in place and fades. `data-anim` carries the animation of the transition in flight. */
+astro-drawer[data-anim='fade'] > dialog {
+	transform: var(--drawer-rest);
+	opacity: 0;
+	transition-property: opacity, transform, scale, translate;
+	transition-duration: var(--drawer-fade-leave-duration, 180ms);
+	transition-timing-function: var(--drawer-fade-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+
+astro-drawer[data-anim='fade'][data-state='open'] > dialog {
+	opacity: 1;
+	transition-duration: var(--drawer-fade-enter-duration, 260ms);
 }
 
 astro-drawer [data-drawer-handle] {
@@ -89,9 +179,18 @@ astro-drawer [data-drawer-handle] {
 	touch-action: none;
 }
 
+/* Already open when it connects (rendered open, a persisted drawer moved): shown in place, like vue's `defaultOpen`. */
+astro-drawer[data-instant] > dialog,
+astro-drawer[data-instant] > dialog::backdrop {
+	transition: none !important;
+}
+
+/* `[data-anim]` matches the specificity of the fade rules above, which would otherwise keep their transition.
+   A sheet carrying `data-reduced-motion="fade"` (vue's per-drawer opt-in) cross-fades instead: the script picks the fade animation. */
 @media (prefers-reduced-motion: reduce) {
-	astro-drawer > dialog,
-	astro-drawer > dialog::backdrop {
+	astro-drawer > dialog:not([data-reduced-motion='fade']),
+	astro-drawer[data-anim] > dialog:not([data-reduced-motion='fade']),
+	astro-drawer > dialog:not([data-reduced-motion='fade'])::backdrop {
 		transition: none;
 	}
 }

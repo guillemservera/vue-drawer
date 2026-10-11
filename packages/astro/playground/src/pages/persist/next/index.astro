@@ -1,0 +1,20 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Persisted drawer: two" router>
+	<p>
+		The menu drawer sits in a wrapper with <code>transition:persist</code> (a custom element can not carry the directive through a component), so the <code>ClientRouter</code> moves the same element into the next page: an open drawer stays open
+		across the navigation, shown in place (no opening animation), and closing it afterwards leaves the page at its top. This is page two.
+	</p>
+	<button class="tap" id="open" data-drawer-open="#menu">Open menu</button>
+	<div transition:persist="menu">
+	<Drawer id="menu" aria-labelledby="menu-title">
+		<h2 id="menu-title">Menu</h2>
+		<p>Follow the link with this drawer open.</p>
+		<a class="tap" id="go" href="/persist/">Go to page one</a>
+		<button class="tap" id="close" data-drawer-close>Close</button>
+	</Drawer>
+	</div>
+</DemoLayout>

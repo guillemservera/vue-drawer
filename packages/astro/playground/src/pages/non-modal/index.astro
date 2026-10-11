@@ -1,0 +1,45 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Non-modal and container">
+	<p>With <code>modal={'{false}'}</code> the page stays interactive: no backdrop, no scroll lock, and an outside press only announces <code>interact-outside</code>. Escape closes the topmost one.</p>
+	<button class="tap" id="count">Page counter: <output id="count-out">0</output> <small>still clickable while the drawer is open</small></button>
+	<button class="tap" id="open-free" data-drawer-open="#free">Non-modal bottom sheet <small>snap points 0.2, 0.5</small></button>
+	<button class="tap" id="open-side" data-drawer-open="#side">Non-modal right sidebar</button>
+	<button class="tap" id="open-panel" data-drawer-open="#inpanel">Drawer inside the panel <small><code>container="#panel"</code></small></button>
+	<p>Outside events: <output id="outside">none</output></p>
+
+	<div id="panel" style="position: relative; height: 18rem; overflow: hidden; border: 2px dashed rgb(128 128 128 / 0.6); border-radius: 0.75rem; padding: 1rem;">
+		A panel. A non-modal drawer with <code>container</code> opens inside it and measures its snap points against it.
+	</div>
+
+	<Drawer id="free" modal={false} snapPoints={[0.2, 0.5]} aria-label="Non-modal bottom sheet">
+		<h2>Non-modal sheet</h2>
+		<p>Active: <output>0.2</output>. Click the counter behind it.</p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="side" modal={false} direction="right" aria-label="Non-modal sidebar">
+		<h2>Non-modal sidebar</h2>
+		<p>The page behind scrolls and clicks.</p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+	<Drawer id="inpanel" modal={false} container="#panel" snapPoints={[0.3, 0.8]} aria-label="Drawer inside the panel">
+		<h2>Inside the panel</h2>
+		<p>Active: <output>0.3</output>. Its height is a fraction of the panel, not of the viewport.</p>
+		<button class="tap" data-drawer-close>Close</button>
+	</Drawer>
+</DemoLayout>
+
+<script>
+	const count = document.getElementById('count-out') as HTMLOutputElement
+	document.getElementById('count')!.addEventListener('click', () => { count.value = String(Number(count.value) + 1) })
+	const log = document.getElementById('outside') as HTMLOutputElement
+	for (const drawer of document.querySelectorAll('astro-drawer')) {
+		drawer.addEventListener('interact-outside', () => { log.value = `interact-outside from #${drawer.id}` })
+		drawer.addEventListener('snap-point-change', (event) => {
+			drawer.querySelector('output')!.value = String((event as CustomEvent).detail)
+		})
+	}
+</script>

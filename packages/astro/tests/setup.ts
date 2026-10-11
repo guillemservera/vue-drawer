@@ -7,6 +7,11 @@ if (typeof HTMLDialogElement !== 'undefined') {
 		this.setAttribute('open', '')
 	}
 
+	// Non-modal: open without the modal state.
+	dialog.show ??= function (this: HTMLDialogElement) {
+		this.setAttribute('open', '')
+	}
+
 	dialog.close ??= function (this: HTMLDialogElement) {
 		if (!this.open) return
 		this.removeAttribute('open')

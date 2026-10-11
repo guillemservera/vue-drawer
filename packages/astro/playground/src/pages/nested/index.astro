@@ -13,6 +13,8 @@ import DemoLayout from '../../layouts/DemoLayout.astro'
 		<button class="tap" id="open-child" data-drawer-open="#child">Bottom in bottom <small>the parent scales back</small></button>
 		<button class="tap" id="open-side" data-drawer-open="#side">Right sidebar <small>the parent stays as it is</small></button>
 		<button class="tap" id="open-strict" data-drawer-open="#strict">Non-dismissible child</button>
+		<button class="tap" id="open-still" data-drawer-open="#still">Bottom, parent stays <small><code>scaleParent={'{false}'}</code></small></button>
+		<button class="tap" id="open-forced" data-drawer-open="#forced">Right, parent scales <small><code>scaleParent</code></small></button>
 		<button class="tap" data-drawer-close>Close parent</button>
 
 		<Drawer id="child" aria-labelledby="child-title">
@@ -30,6 +32,16 @@ import DemoLayout from '../../layouts/DemoLayout.astro'
 			<h2 id="side-title">Right sidebar</h2>
 			<p>A different side, so the parent does not scale.</p>
 			<button class="tap" data-drawer-close>Close sidebar</button>
+		</Drawer>
+		<Drawer id="still" scaleParent={false} aria-labelledby="still-title">
+			<h2 id="still-title">Parent stays</h2>
+			<p>Same side, but the parent does not step back.</p>
+			<button class="tap" data-drawer-close>Close</button>
+		</Drawer>
+		<Drawer id="forced" direction="right" scaleParent aria-labelledby="forced-title">
+			<h2 id="forced-title">Parent scales</h2>
+			<p>A different side, but the parent steps back.</p>
+			<button class="tap" data-drawer-close>Close</button>
 		</Drawer>
 		<Drawer id="strict" dismissible={false} aria-labelledby="strict-title">
 			<h2 id="strict-title">Non-dismissible child</h2>
