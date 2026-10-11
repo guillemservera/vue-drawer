@@ -6,6 +6,8 @@ export const demos = [
 	{ href: '/non-dismissible/', title: 'Non-dismissible', description: 'Only the explicit button closes it.' },
 	{ href: '/scroll-body/', title: 'Scroll body', description: 'Long content in a bottom sheet and a left sidebar.' },
 	{ href: '/form-drawer/', title: 'Form drawer', description: 'Inputs and a select; the first input is focused on open.' },
+	{ href: '/snap-points/', title: 'Snap points', description: 'Fractions, lengths with a backdrop fade, sequential and a right sidebar.' },
+	{ href: '/nested/', title: 'Nested drawers', description: 'Same-side scale-back, a different-side child, three levels and non-dismissible mixes.' },
 ]
 
 export const unsupported = [

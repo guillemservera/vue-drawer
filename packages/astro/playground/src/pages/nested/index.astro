@@ -1,0 +1,50 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Nested drawers">
+	<p>A drawer placed inside another drawer's content stacks above it. Escape and the backdrop close only the top drawer, and closing a parent closes the drawers above it. The parent scales back only when the nested drawer opens from the same side.</p>
+	<button class="tap" id="open" data-drawer-open="#parent">Open parent</button>
+	<button class="tap" id="open-locked" data-drawer-open="#locked">Open non-dismissible parent</button>
+
+	<Drawer id="parent" aria-labelledby="parent-title">
+		<h2 id="parent-title">Parent</h2>
+		<button class="tap" id="open-child" data-drawer-open="#child">Bottom in bottom <small>the parent scales back</small></button>
+		<button class="tap" id="open-side" data-drawer-open="#side">Right sidebar <small>the parent stays as it is</small></button>
+		<button class="tap" id="open-strict" data-drawer-open="#strict">Non-dismissible child</button>
+		<button class="tap" data-drawer-close>Close parent</button>
+
+		<Drawer id="child" aria-labelledby="child-title">
+			<h2 id="child-title">Child</h2>
+			<p>Drag or press Escape to close this one only.</p>
+			<button class="tap" id="open-grandchild" data-drawer-open="#grandchild">Open a third level</button>
+			<button class="tap" id="close-child" data-drawer-close>Close child</button>
+			<Drawer id="grandchild" aria-labelledby="grandchild-title">
+				<h2 id="grandchild-title">Grandchild</h2>
+				{Array.from({ length: 30 }, (_, i) => <p>Grandchild row {i + 1}, long enough to scroll.</p>)}
+				<button class="tap" data-drawer-close>Close grandchild</button>
+			</Drawer>
+		</Drawer>
+		<Drawer id="side" direction="right" aria-labelledby="side-title">
+			<h2 id="side-title">Right sidebar</h2>
+			<p>A different side, so the parent does not scale.</p>
+			<button class="tap" data-drawer-close>Close sidebar</button>
+		</Drawer>
+		<Drawer id="strict" dismissible={false} aria-labelledby="strict-title">
+			<h2 id="strict-title">Non-dismissible child</h2>
+			<p>Escape and the backdrop do nothing here.</p>
+			<button class="tap" id="close-strict" data-drawer-close>Done</button>
+		</Drawer>
+	</Drawer>
+
+	<Drawer id="locked" dismissible={false} aria-labelledby="locked-title">
+		<h2 id="locked-title">Non-dismissible parent</h2>
+		<button class="tap" id="open-free" data-drawer-open="#free">Open a dismissible child</button>
+		<button class="tap" id="close-locked" data-drawer-close>Close parent</button>
+		<Drawer id="free" aria-labelledby="free-title">
+			<h2 id="free-title">Dismissible child</h2>
+			<p>Escape, the backdrop and drag close this one; the parent stays.</p>
+		</Drawer>
+	</Drawer>
+</DemoLayout>

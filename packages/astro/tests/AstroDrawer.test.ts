@@ -405,6 +405,249 @@ describe('astro-drawer', () => {
 		})
 	})
 
+	describe('snap points', () => {
+		// jsdom's viewport is 1024x768.
+		function setup(attrs = '') {
+			const mounted = mount(`open snap-points="200px, 0.5, 0.9" ${attrs}`)
+			return { ...mounted, handle: mounted.dialog.querySelector('[data-drawer-handle]')! }
+		}
+		const rest = (dialog: HTMLDialogElement) => dialog.style.getPropertyValue('--drawer-rest')
+		const drag = (target: Element, y0: number, y1: number, ms: number, end = 'pointerup') => {
+			pointer(target, 'pointerdown', y0, 0)
+			pointer(target, 'pointermove', y1, ms / 2)
+			pointer(target, end, y1, ms)
+		}
+
+		it('rests on the active snap point, the first by default or when unknown', () => {
+			const { drawer, dialog } = setup()
+			expect(rest(dialog)).toBe('translateY(568px)') // 768 - 200px
+			drawer.setAttribute('active-snap-point', '0.5')
+			expect(rest(dialog)).toBe('translateY(384px)')
+			drawer.setAttribute('active-snap-point', '0.50') // same value, vue's === on parsed numbers
+			expect(rest(dialog)).toBe('translateY(384px)')
+			drawer.setAttribute('active-snap-point', 'bogus')
+			expect(rest(dialog)).toBe('translateY(568px)')
+			expect(mount('open').dialog.style.getPropertyValue('--drawer-rest')).toBe('translateY(0px)')
+		})
+
+		it('measures a right sidebar on the viewport width; top and left drawers ignore snap points', () => {
+			const { dialog } = mount('open direction="right" snap-points="0.25, 1"')
+			expect(rest(dialog)).toBe('translateX(768px)') // 1024 - 256
+			expect(mount('open direction="left" snap-points="0.25, 1"').dialog.style.getPropertyValue('--drawer-rest')).toBe('translateX(0px)')
+			expect(mount('open direction="top" snap-points="0.25, 1"').dialog.style.getPropertyValue('--drawer-rest')).toBe('translateY(0px)')
+		})
+
+		it('shows the backdrop from fade-from-index (default: the last snap point)', () => {
+			const { drawer } = setup()
+			expect(drawer.hasAttribute('data-backdrop-hidden')).toBe(true)
+			drawer.setAttribute('active-snap-point', '0.9')
+			expect(drawer.hasAttribute('data-backdrop-hidden')).toBe(false)
+			const faded = setup('fade-from-index="1" active-snap-point="0.5"').drawer
+			expect(faded.hasAttribute('data-backdrop-hidden')).toBe(false)
+			expect(setup('fade-from-index="0"').drawer.hasAttribute('data-backdrop-hidden')).toBe(false)
+			expect(mount('open').drawer.hasAttribute('data-backdrop-hidden')).toBe(false)
+		})
+
+		it('lets overflowing content scroll on touch only at the last snap point', () => {
+			const { drawer, dialog } = setup()
+			Object.defineProperty(dialog, 'scrollHeight', { configurable: true, value: 2000 })
+			Object.defineProperty(dialog, 'clientHeight', { configurable: true, value: 768 })
+			drawer.setAttribute('active-snap-point', '0.5')
+			expect(dialog.style.touchAction).toBe('none')
+			drawer.setAttribute('active-snap-point', '0.9')
+			expect(dialog.style.touchAction).toBe('')
+		})
+
+		it('drags between snap points: a slow release lands on the nearest and announces it', () => {
+			const { drawer, dialog, handle } = setup()
+			const onChange = vi.fn()
+			drawer.addEventListener('snap-point-change', event => onChange((event as CustomEvent).detail))
+
+			pointer(handle, 'pointerdown', 600, 0)
+			pointer(handle, 'pointermove', 400, 1000) // up toward 0.5 (offset 368)
+			expect(dialog.style.transform).toBe('translateY(368px)')
+			pointer(handle, 'pointerup', 400, 2000)
+			expect(drawer.getAttribute('active-snap-point')).toBe('0.5')
+			expect(onChange).toHaveBeenCalledWith(0.5)
+			expect(dialog.style.transform).toBe('')
+			expect(rest(dialog)).toBe('translateY(384px)')
+
+			drag(handle, 600, 590, 2000) // a small slow drag stays put, no event
+			expect(drawer.getAttribute('active-snap-point')).toBe('0.5')
+			expect(onChange).toHaveBeenCalledTimes(1)
+
+			drawer.setAttribute('active-snap-point', '0.9') // set from outside: moves, no event
+			expect(rest(dialog)).toBe(`translateY(${768 - 768 * 0.9}px)`)
+			expect(onChange).toHaveBeenCalledTimes(1)
+		})
+
+		it('only drags toward the open edge below the last snap point, and never past it', () => {
+			const { drawer, dialog, handle } = setup('active-snap-point="0.9"')
+			pointer(handle, 'pointerdown', 300, 0)
+			pointer(handle, 'pointermove', 200, 500)
+			expect(dialog.style.transform).toBe('')
+			pointer(handle, 'pointerup', 200, 600)
+
+			drawer.setAttribute('active-snap-point', '0.5')
+			pointer(handle, 'pointerdown', 300, 0)
+			pointer(handle, 'pointermove', -500, 500)
+			expect(dialog.style.transform).toBe(`translateY(${768 - 768 * 0.9}px)`) // clamped at 0.9
+			pointer(handle, 'pointercancel', -500, 600)
+			expect(drawer.getAttribute('active-snap-point')).toBe('0.5')
+		})
+
+		it('dismisses below the first snap point, or stops there when not dismissible', async () => {
+			const { dialog, handle } = setup()
+			drag(handle, 600, 660, 2000) // 60px > 25% of the 200px visible
+			await flush()
+			expect(dialog.open).toBe(false)
+
+			const locked = setup('dismissible="false"')
+			drag(locked.handle, 600, 900, 2000)
+			pointer(locked.handle, 'pointerdown', 600, 0)
+			pointer(locked.handle, 'pointermove', 900, 1000)
+			expect(locked.dialog.style.transform).toBe('translateY(568px)') // clamped at the first snap point
+			pointer(locked.handle, 'pointerup', 900, 2000)
+			await flush()
+			expect(locked.dialog.open).toBe(true)
+			pointer(locked.handle, 'pointerdown', 600, 0) // still drags up between snap points
+			pointer(locked.handle, 'pointermove', 400, 1000)
+			pointer(locked.handle, 'pointerup', 400, 2000)
+			expect(locked.drawer.getAttribute('active-snap-point')).toBe('0.5')
+		})
+
+		it('snaps by velocity: a flick moves one snap point, a hard one skips to the end unless sequential', async () => {
+			const { drawer, dialog, handle } = setup('active-snap-point="0.9"')
+			drag(handle, 100, 150, 50) // within 25% of the top snap point: stays, whatever the speed
+			expect(drawer.getAttribute('active-snap-point')).toBe('0.9')
+			drag(handle, 100, 300, 200) // 1px/ms down
+			expect(drawer.getAttribute('active-snap-point')).toBe('0.5')
+			drag(handle, 400, 360, 40) // 1px/ms up
+			expect(drawer.getAttribute('active-snap-point')).toBe('0.9')
+
+			const sequential = setup('active-snap-point="0.9" snap-to-sequential-point')
+			drag(sequential.handle, 100, 400, 20) // 15px/ms
+			expect(sequential.drawer.getAttribute('active-snap-point')).toBe('0.5')
+			await flush()
+			expect(sequential.dialog.open).toBe(true)
+
+			drag(handle, 100, 400, 20) // 15px/ms from the top snap point
+			await flush()
+			expect(dialog.open).toBe(false)
+		})
+	})
+
+	describe('nested drawers', () => {
+		function mountNested(parentAttrs = '', childAttrs = '') {
+			document.body.insertAdjacentHTML('beforeend', `
+				<astro-drawer id="p" open ${parentAttrs}>
+					<dialog aria-label="Parent"><div data-drawer-handle></div><p>Parent</p>
+						<astro-drawer id="c" ${childAttrs}>
+							<dialog aria-label="Child"><div data-drawer-handle></div><p>Child</p><button data-drawer-close>Done</button></dialog>
+						</astro-drawer>
+					</dialog>
+				</astro-drawer>`)
+			const parent = document.getElementById('p') as AstroDrawer
+			const child = document.getElementById('c') as AstroDrawer
+			const parentDialog = parent.querySelector('dialog')!
+			const childDialog = child.querySelector('dialog')!
+			for (const d of [parentDialog, childDialog]) Object.defineProperty(d, 'offsetHeight', { configurable: true, value: 400 })
+			child.show()
+			return { parent, child, parentDialog, childDialog }
+		}
+
+		it('scales the parent back with the CSS scale property only when both open from the same side', async () => {
+			const { child, parentDialog } = mountNested()
+			expect(parentDialog.style.scale).toBe(`${1 - 16 / 1024}`)
+			expect(parentDialog.style.translate).toBe('0 -16px')
+			expect(parentDialog.style.transform).toBe('')
+			child.close()
+			expect(parentDialog.style.scale).toBe('') // scales back up as the child starts closing
+			expect(parentDialog.style.translate).toBe('')
+			document.body.innerHTML = ''
+
+			const side = mountNested('', 'direction="right"')
+			expect(side.parentDialog.style.scale).toBe('')
+			document.body.innerHTML = ''
+
+			const right = mountNested('direction="right"', 'direction="right"')
+			expect(right.parentDialog.style.translate).toBe('-16px')
+		})
+
+		it('keeps the child\'s events away from the parent', async () => {
+			const { parentDialog, childDialog } = mountNested()
+			const childHandle = childDialog.querySelector('[data-drawer-handle]')!
+			pointer(childHandle, 'pointerdown', 100, 0)
+			pointer(childHandle, 'pointermove', 190, 500)
+			expect(childDialog.style.transform).toBe('translateY(90px)')
+			expect(parentDialog.style.transform).toBe('')
+			pointer(childHandle, 'pointercancel', 190, 600)
+
+			vi.spyOn(childDialog, 'getBoundingClientRect').mockReturnValue({ top: 300, bottom: 800, left: 0, right: 400 } as DOMRect)
+			childDialog.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100, clientY: 100 })) // child backdrop
+			await flush()
+			expect(childDialog.open).toBe(false)
+			expect(parentDialog.open).toBe(true)
+		})
+
+		it('closes only the child from its [data-drawer-close]', async () => {
+			const { parent, child, childDialog, parentDialog } = mountNested()
+			childDialog.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+			await flush()
+			expect(child.open).toBe(false)
+			expect(parent.open).toBe(true)
+			expect(parentDialog.open).toBe(true)
+			expect(isLocked()).toBe(true)
+		})
+
+		it.each([
+			['close()', (parent: AstroDrawer) => parent.close()],
+			['open attribute removal', (parent: AstroDrawer) => parent.removeAttribute('open')],
+			['a native close', (parent: AstroDrawer) => parent.querySelector('dialog')!.close()],
+			['element removal', (parent: AstroDrawer) => parent.remove()],
+		])('closes the child and releases every lock on the parent\'s %s', async (_, closeParent) => {
+			const other = mount('open') // a third, unrelated open drawer keeps one lock
+			const { parent, child, childDialog, parentDialog } = mountNested()
+			const onChildClose = vi.fn()
+			child.addEventListener('close', onChildClose)
+			closeParent(parent)
+			await flush()
+			expect(childDialog.open).toBe(false)
+			expect(parentDialog.open).toBe(false)
+			expect(parentDialog.style.scale).toBe('')
+			// A removed drawer keeps its `open` attribute (re-insertion reopens it) and fires no `close`, like a lone one.
+			if (parent.isConnected) {
+				expect(child.open).toBe(false)
+				expect(onChildClose).toHaveBeenCalledTimes(1)
+			}
+			expect(isLocked()).toBe(true)
+			other.drawer.close()
+			await flush()
+			expect(isLocked()).toBe(false)
+		})
+
+		it('scales the parent again when the child reopens during its close transition', async () => {
+			const { child, childDialog, parentDialog } = mountNested()
+			let finish!: () => void
+			const finished = new Promise<void>((resolve) => { finish = resolve })
+			childDialog.getAnimations = () => [{ effect: { target: childDialog }, finished } as unknown as Animation]
+			child.close()
+			expect(parentDialog.style.scale).toBe('')
+			child.show()
+			finish()
+			await flush()
+			expect(childDialog.open).toBe(true)
+			expect(parentDialog.style.scale).toBe(`${1 - 16 / 1024}`)
+		})
+
+		it('restores the parent when an open child is removed', () => {
+			const { child, parentDialog } = mountNested()
+			child.remove()
+			expect(parentDialog.style.scale).toBe('')
+			expect(isLocked()).toBe(true)
+		})
+	})
+
 	it('opens from a declarative trigger', () => {
 		const { dialog } = mount()
 		document.body.insertAdjacentHTML('beforeend', '<button data-drawer-open="#d"><span>Open</span></button>')

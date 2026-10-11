@@ -1,4 +1,4 @@
-astro-drawer dialog {
+astro-drawer > dialog {
 	box-sizing: border-box;
 	inset: auto 0 0;
 	width: 100%;
@@ -13,23 +13,29 @@ astro-drawer dialog {
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	transform: translateY(100%);
-	transition: transform var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
+	/* Set inline to the resting snap point; declared here so a nested dialog does not inherit its parent's. */
+	--drawer-rest: none;
+	/* scale/translate: a parent drawer stepping back behind a nested one. */
+	transform-origin: top;
+	transition: var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
+	transition-property: transform, scale, translate;
 }
 
-astro-drawer dialog::backdrop {
+astro-drawer > dialog::backdrop {
 	background: var(--drawer-backdrop, rgb(0 0 0 / 0.4));
 	opacity: 0;
 	transition: opacity var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
-astro-drawer[direction='top'] dialog {
+astro-drawer[direction='top'] > dialog {
 	inset: 0 0 auto;
 	padding: var(--drawer-padding, max(1rem, env(safe-area-inset-top)) 1rem 0);
 	border-radius: var(--drawer-radius, 0 0 1rem 1rem);
 	transform: translateY(-100%);
+	transform-origin: bottom;
 }
 
-astro-drawer:is([direction='left'], [direction='right']) dialog {
+astro-drawer:is([direction='left'], [direction='right']) > dialog {
 	inset: 0 auto 0 0;
 	width: var(--drawer-width, min(20rem, 85vw));
 	height: auto;
@@ -40,21 +46,37 @@ astro-drawer:is([direction='left'], [direction='right']) dialog {
 	padding: var(--drawer-padding, max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)));
 	border-radius: var(--drawer-radius, 0 1rem 1rem 0);
 	transform: translateX(-100%);
+	transform-origin: left;
 }
 
-astro-drawer[direction='right'] dialog {
+astro-drawer[direction='right'] > dialog {
 	inset: 0 0 0 auto;
 	border-radius: var(--drawer-radius, 1rem 0 0 1rem);
 	transform: translateX(100%);
+	transform-origin: right;
 }
 
 /* After the direction rules: same specificity, so the open state must come last. */
-astro-drawer[data-state='open'] dialog {
-	transform: none;
+astro-drawer[data-state='open'] > dialog {
+	transform: var(--drawer-rest);
 }
 
-astro-drawer[data-state='open'] dialog::backdrop {
+astro-drawer[data-state='open'] > dialog::backdrop {
 	opacity: 1;
+}
+
+astro-drawer[data-backdrop-hidden] > dialog::backdrop {
+	opacity: 0;
+}
+
+/* Snap points (bottom and right only) are measured on the viewport like vue's, so the sheet spans it along its axis. */
+astro-drawer[snap-points]:not([direction='top']) > dialog {
+	height: 100dvh;
+	max-height: none;
+}
+
+astro-drawer[snap-points][direction='right'] > dialog {
+	width: 100vw;
 }
 
 astro-drawer [data-drawer-handle] {
@@ -68,8 +90,8 @@ astro-drawer [data-drawer-handle] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	astro-drawer dialog,
-	astro-drawer dialog::backdrop {
+	astro-drawer > dialog,
+	astro-drawer > dialog::backdrop {
 		transition: none;
 	}
 }
