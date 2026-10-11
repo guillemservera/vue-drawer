@@ -1,0 +1,19 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Side drawers">
+	<p>Sidebars slide in from the left or right edge and are dragged back toward it from anywhere. A top sheet keeps its handle at the bottom edge.</p>
+	<button class="tap" id="open-right" data-drawer-open="#right">Right sidebar</button>
+	<button class="tap" id="open-left" data-drawer-open="#left">Left sidebar</button>
+	<button class="tap" id="open-top" data-drawer-open="#top">Top sheet</button>
+	{([['right', 'Right sidebar'], ['left', 'Left sidebar'], ['top', 'Top sheet']] as const).map(([direction, title]) => (
+		<Drawer id={direction} direction={direction} aria-labelledby={`${direction}-title`}>
+			<h2 id={`${direction}-title`}>{title}</h2>
+			<p>Drag toward the {direction} edge, press Escape or click the backdrop.</p>
+			{['Overview', 'Positions', 'Signals', 'Risk'].map(item => <button class="tap">{item}</button>)}
+			<button class="tap" data-drawer-close>Close</button>
+		</Drawer>
+	))}
+</DemoLayout>

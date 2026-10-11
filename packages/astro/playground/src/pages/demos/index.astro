@@ -1,0 +1,17 @@
+---
+import DemoLayout from '../../layouts/DemoLayout.astro'
+import { demos, unsupported } from '../../demos'
+---
+
+<DemoLayout title="astro-drawer demos" filler={false}>
+	<nav aria-label="Demos">
+		{demos.map(demo => <a class="tap" href={demo.href}>{demo.title}<small>{demo.description}</small></a>)}
+	</nav>
+	<h2>Not supported yet</h2>
+	<ul>
+		{unsupported.map(item => <li><strong>{item.title}</strong>: {item.description}</li>)}
+	</ul>
+	<h2>Test pages</h2>
+	<a class="tap" href="/">Page one<small>ClientRouter navigation with a drawer open.</small></a>
+	<a class="tap" href="/two/">Page two<small>Scrollable sheet.</small></a>
+</DemoLayout>

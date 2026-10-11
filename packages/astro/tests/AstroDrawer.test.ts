@@ -213,6 +213,147 @@ describe('astro-drawer', () => {
 		})
 	})
 
+	describe('direction', () => {
+		function setup(direction: string) {
+			const mounted = mount(`open direction="${direction}"`)
+			Object.defineProperty(mounted.dialog, 'offsetWidth', { configurable: true, value: 300 })
+			Object.defineProperty(mounted.dialog, 'offsetHeight', { configurable: true, value: 400 })
+			return { ...mounted, content: mounted.dialog.querySelector('p')! }
+		}
+		const drag = (target: Element, [x0, y0]: number[], [x1, y1]: number[], end = 'pointerup') => {
+			pointer(target, 'pointerdown', y0, 0, x0)
+			pointer(target, 'pointermove', y1, 1000, x1)
+			pointer(target, end, y1, 2000, x1)
+		}
+
+		it.each([
+			['right', [100, 0], [190, 0], 'translateX(90px)'],
+			['left', [200, 0], [110, 0], 'translateX(-90px)'],
+			['top', [0, 200], [0, 110], 'translateY(-90px)'],
+			['bogus', [0, 100], [0, 190], 'translateY(90px)'], // unknown values fall back to bottom
+		])('%s follows the pointer toward its closing edge only', (direction, from, to, transform) => {
+			const { dialog, content } = setup(direction)
+			pointer(content, 'pointerdown', from[1], 0, from[0])
+			pointer(content, 'pointermove', to[1], 500, to[0])
+			expect(dialog.style.transform).toBe(transform)
+			pointer(content, 'pointercancel', to[1], 600, to[0])
+
+			// The opposite way never starts a drag.
+			pointer(content, 'pointerdown', to[1], 0, to[0])
+			pointer(content, 'pointermove', from[1], 500, from[0])
+			expect(dialog.style.transform).toBe('')
+		})
+
+		it('ignores cross-axis drags on a sidebar and sizes the threshold by its width', async () => {
+			const { dialog, content } = setup('right')
+			pointer(content, 'pointerdown', 100, 0, 100)
+			pointer(content, 'pointermove', 300, 10, 100)
+			expect(dialog.style.transform).toBe('')
+
+			drag(content, [100, 0], [170, 0]) // 70px < 25% of 300px
+			await flush()
+			expect(dialog.open).toBe(true)
+			drag(content, [100, 0], [180, 0]) // 80px > 75px
+			await flush()
+			expect(dialog.open).toBe(false)
+		})
+
+		it('lets sidebars pan vertically and non-scrolling sheets block panning', () => {
+			expect(mount('open direction="left"').dialog.style.touchAction).toBe('pan-y')
+			expect(mount('open direction="top"').dialog.style.touchAction).toBe('none')
+			expect(mount('open').dialog.style.touchAction).toBe('none')
+		})
+
+		it('lets content scrolled away from the closing edge keep the gesture', () => {
+			const scroll = (el: Element, values: Record<string, number>) => {
+				for (const [key, value] of Object.entries(values)) Object.defineProperty(el, key, { configurable: true, value })
+			}
+			const blocked = (dialog: HTMLDialogElement, target: Element, from: number[], to: number[]) => {
+				pointer(target, 'pointerdown', from[1], 0, from[0])
+				pointer(target, 'pointermove', to[1], 10, to[0])
+				const ok = dialog.style.transform === ''
+				pointer(target, 'pointercancel', to[1], 20, to[0])
+				return ok
+			}
+
+			// right: any horizontal scroll offset owns the drag
+			let { dialog, content } = setup('right')
+			scroll(dialog, { scrollLeft: 30 })
+			expect(blocked(dialog, content, [100, 0], [200, 0])).toBe(true)
+			expect(blocked(dialog, dialog.querySelector('[data-drawer-handle]')!, [100, 0], [200, 0])).toBe(false)
+			scroll(dialog, { scrollLeft: 0, scrollTop: 50 }) // vertical scroll does not matter to a sidebar
+			expect(blocked(dialog, content, [100, 0], [200, 0])).toBe(false)
+			dialog.closest('astro-drawer')!.remove();
+
+			// left: a horizontal scroller not at its end owns the drag; an ellipsized (overflow: hidden) label does not
+			({ dialog, content } = setup('left'))
+			content.style.overflowX = 'auto'
+			scroll(content, { scrollWidth: 500, clientWidth: 200, scrollLeft: 0 })
+			expect(blocked(dialog, content, [200, 0], [100, 0])).toBe(true)
+			scroll(content, { scrollLeft: 300 })
+			expect(blocked(dialog, content, [200, 0], [100, 0])).toBe(false)
+			content.style.overflowX = 'hidden'
+			scroll(content, { scrollLeft: 0 })
+			expect(blocked(dialog, content, [200, 0], [100, 0])).toBe(false)
+			dialog.closest('astro-drawer')!.remove();
+
+			// top: content that can still scroll down owns the upward drag
+			({ dialog, content } = setup('top'))
+			dialog.style.overflowY = 'auto'
+			scroll(dialog, { scrollHeight: 900, clientHeight: 400, scrollTop: 0 })
+			expect(blocked(dialog, content, [0, 300], [0, 200])).toBe(true)
+			scroll(dialog, { scrollTop: 500 })
+			expect(blocked(dialog, content, [0, 300], [0, 200])).toBe(false)
+		})
+	})
+
+	describe('dismissible="false"', () => {
+		it('ignores Escape, backdrop clicks and drags but still closes explicitly', async () => {
+			const { drawer, dialog } = mount('open dismissible="false"')
+			Object.defineProperty(dialog, 'offsetHeight', { configurable: true, value: 400 })
+			vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ top: 300, bottom: 800, left: 0, right: 400 } as DOMRect)
+			expect(dialog.getAttribute('closedby')).toBe('none')
+
+			const cancel = new Event('cancel', { cancelable: true })
+			dialog.dispatchEvent(cancel)
+			expect(cancel.defaultPrevented).toBe(true)
+			dialog.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 100, clientY: 100 }))
+			const handle = dialog.querySelector('[data-drawer-handle]')!
+			pointer(handle, 'pointerdown', 400, 0, 100)
+			pointer(handle, 'pointermove', 700, 10, 100)
+			expect(dialog.style.transform).toBe('')
+			pointer(handle, 'pointerup', 700, 20, 100)
+			await flush()
+			expect(drawer.open).toBe(true)
+			expect(dialog.open).toBe(true)
+
+			drawer.close()
+			await flush()
+			expect(dialog.open).toBe(false)
+		})
+
+		it('follows attribute changes', () => {
+			const { drawer, dialog } = mount('open dismissible="false"')
+			drawer.removeAttribute('dismissible')
+			expect(dialog.hasAttribute('closedby')).toBe(false)
+			drawer.setAttribute('dismissible', 'false')
+			expect(dialog.getAttribute('closedby')).toBe('none')
+		})
+
+		it.each(['', 'dismissible="false"'])('closes from [data-drawer-close] (%s) unless the click is prevented', async (attrs) => {
+			const { dialog } = mount(`open ${attrs}`)
+			dialog.insertAdjacentHTML('beforeend', '<button data-drawer-close><span>Done</span></button>')
+			const span = dialog.querySelector('[data-drawer-close] span')!
+			span.addEventListener('click', event => event.preventDefault(), { once: true })
+			span.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+			await flush()
+			expect(dialog.open).toBe(true)
+			span.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+			await flush()
+			expect(dialog.open).toBe(false)
+		})
+	})
+
 	describe('scroll lock', () => {
 		it('releases the lock when the element is removed while open', async () => {
 			const { drawer } = mount('open')

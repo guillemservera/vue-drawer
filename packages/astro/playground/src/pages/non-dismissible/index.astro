@@ -1,0 +1,14 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Non-dismissible">
+	<p>With <code>{'dismissible={false}'}</code>, Escape, backdrop clicks and drags do not close the drawer. Only the button does.</p>
+	<button class="tap" id="open" data-drawer-open="#drawer">Open locked drawer</button>
+	<Drawer id="drawer" dismissible={false} aria-labelledby="locked-title">
+		<h2 id="locked-title">Review order</h2>
+		<p>This flow only closes from an explicit action.</p>
+		<button class="tap" id="confirm" data-drawer-close>Confirm and close</button>
+	</Drawer>
+</DemoLayout>

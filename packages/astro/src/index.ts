@@ -4,13 +4,16 @@ import {
 	DRAWER_VELOCITY_THRESHOLD,
 	canUseBodyFix,
 	createTouchScrollGuard,
+	getCloseDirectionSign,
 	isDrawerNoDragTarget,
 	isIOSBrowser,
+	isVerticalDrawer,
 	lockDocumentOverscroll,
 	lockDocumentScroll,
 	restoreDocumentOverscroll,
 	restoreDocumentScroll,
 } from '@guillemservera/drawer-core'
+import type { DrawerDirection } from '@guillemservera/drawer-core'
 import './style.css'
 
 // Safari scrolls the page behind `overflow: hidden`; pin the body instead (same fix as vue-drawer).
@@ -36,7 +39,7 @@ function unpinBody() {
 const Base = (globalThis.HTMLElement ?? class {}) as typeof HTMLElement
 
 export class AstroDrawer extends Base {
-	static observedAttributes = ['open']
+	static observedAttributes = ['open', 'dismissible']
 
 	#dialog: HTMLDialogElement | null = null
 	#listeners: AbortController | null = null
@@ -44,6 +47,24 @@ export class AstroDrawer extends Base {
 	#locked = false
 	#closeId = 0
 	#drag: { x: number, y: number, t: number, active: boolean } | null = null
+
+	// Like vue's `dismissible` prop: true unless set to "false".
+	get #dismissible() {
+		return this.getAttribute('dismissible') !== 'false'
+	}
+
+	get #direction(): DrawerDirection {
+		const value = this.getAttribute('direction')
+		return value === 'top' || value === 'left' || value === 'right' ? value : 'bottom'
+	}
+
+	/** Pointer travel since the drag start: `[toward the closing edge, across it]`. */
+	#delta(event: PointerEvent, drag: { x: number, y: number }) {
+		const dx = event.clientX - drag.x
+		const dy = event.clientY - drag.y
+		const sign = getCloseDirectionSign(this.#direction)
+		return isVerticalDrawer(this.#direction) ? [dy * sign, dx] : [dx * sign, dy]
+	}
 
 	get open() {
 		return this.hasAttribute('open')
@@ -71,7 +92,7 @@ export class AstroDrawer extends Base {
 
 		on('cancel', (event) => {
 			event.preventDefault()
-			this.close()
+			if (this.#dismissible) this.close()
 		})
 		// Any native close (our animated close, unpreventable Escape, form[method=dialog]) ends here.
 		on('close', () => {
@@ -91,24 +112,32 @@ export class AstroDrawer extends Base {
 			return x < rect.left || x > rect.right || y < rect.top || y > rect.bottom
 		}
 		on('click', (event) => {
-			if (onBackdrop(event)) this.close()
+			// `[data-drawer-close]` is an explicit close (vue's DrawerClose), so it ignores `dismissible` but honors a prevented click.
+			if (onBackdrop(event) ? this.#dismissible : !event.defaultPrevented && (event.target as Element).closest('[data-drawer-close]')) this.close()
 		})
 		on('pointerdown', (event) => {
-			if (event.button || onBackdrop(event) || isDrawerNoDragTarget(event.target)) return
-			// Off the handle, a scrolled ancestor owns the gesture: dragging down scrolls it back first.
+			if (event.button || !this.#dismissible || onBackdrop(event) || isDrawerNoDragTarget(event.target)) return
+			// Off the handle, an ancestor scrolled away from the closing edge owns the gesture: dragging toward that edge scrolls it back first.
 			const target = event.target as Element
+			const vertical = isVerticalDrawer(this.#direction)
+			const toEnd = getCloseDirectionSign(this.#direction) < 0
 			for (let el: Element | null = target.closest('[data-drawer-handle]') ? null : target; el && el !== this; el = el.parentElement) {
-				if (el.scrollTop > 0) return
+				// shortcut: RTL scrollers report a negative scrollLeft, so left/right drawers misread them; handle RTL if needed.
+				const scrolled = vertical ? el.scrollTop : el.scrollLeft
+				// Bottom/right: scrolled at all. Top/left: a real scroller (ellipsized labels overflow too) not yet at its end.
+				if (toEnd
+					? (vertical ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth) - scrolled > 1 && /auto|scroll/.test(getComputedStyle(el)[vertical ? 'overflowY' : 'overflowX'])
+					: scrolled > 0) return
 			}
 			this.#drag = { x: event.clientX, y: event.clientY, t: event.timeStamp, active: false }
 		})
 		on('pointermove', (event) => {
 			const drag = this.#drag
 			if (!drag) return
-			const dy = event.clientY - drag.y
+			const [d, across] = this.#delta(event, drag)
 			if (!drag.active) {
-				if (Math.abs(dy) < DRAWER_DRAG_ACTIVATION_PX) return
-				if (dy < 0 || Math.abs(event.clientX - drag.x) > dy) {
+				if (Math.abs(d) < DRAWER_DRAG_ACTIVATION_PX) return
+				if (d < 0 || Math.abs(across) > d) {
 					this.#drag = null
 					return
 				}
@@ -116,17 +145,19 @@ export class AstroDrawer extends Base {
 				dialog.setPointerCapture?.(event.pointerId)
 				dialog.style.transition = 'none'
 			}
-			dialog.style.transform = `translateY(${Math.max(dy, 0)}px)`
+			const direction = this.#direction
+			dialog.style.transform = `translate${isVerticalDrawer(direction) ? 'Y' : 'X'}(${Math.max(d, 0) * getCloseDirectionSign(direction)}px)`
 		})
 		const release = (event: PointerEvent) => {
 			const drag = this.#drag
 			this.#drag = null
 			if (!drag?.active) return
-			const dy = event.clientY - drag.y
+			const [d] = this.#delta(event, drag)
 			// Clearing inline styles lets the CSS transition run from the dragged position.
 			dialog.style.transition = dialog.style.transform = ''
-			const fast = dy / Math.max(event.timeStamp - drag.t, 1) > DRAWER_VELOCITY_THRESHOLD
-			if (event.type === 'pointerup' && (fast || dy > dialog.offsetHeight * DRAWER_DEFAULT_CLOSE_THRESHOLD)) this.close()
+			const fast = d / Math.max(event.timeStamp - drag.t, 1) > DRAWER_VELOCITY_THRESHOLD
+			const size = isVerticalDrawer(this.#direction) ? dialog.offsetHeight : dialog.offsetWidth
+			if (event.type === 'pointerup' && (fast || d > size * DRAWER_DEFAULT_CLOSE_THRESHOLD)) this.close()
 		}
 		on('pointerup', release)
 		on('pointercancel', release)
@@ -149,15 +180,20 @@ export class AstroDrawer extends Base {
 	async #sync() {
 		const dialog = this.#dialog
 		if (!dialog || !this.isConnected) return
+		// Chromium/WebKit force-close a modal after repeated Escapes even when `cancel` is prevented; `closedby="none"` stops that.
+		// shortcut: engines without `closedby` keep only the prevented `cancel`, so a repeated Escape can still close; re-open on `close` if they matter.
+		if (this.#dismissible) dialog.removeAttribute('closedby')
+		else dialog.setAttribute('closedby', 'none')
 
 		if (this.open) {
 			this.#closeId++
 			if (!dialog.open) {
 				dialog.showModal()
 				this.#lock()
-				// Touch drags on a scroll container become native scrolls, so only non-scrolling sheets block panning.
+				// Touch drags on a scroll container become native scrolls, so only non-scrolling sheets block panning on the drag axis.
+				// Sidebars always keep vertical panning: they scroll across their drag axis.
 				// shortcut: measured once per open, content that grows while open keeps the old value; use a ResizeObserver if that matters.
-				dialog.style.touchAction = dialog.scrollHeight > dialog.clientHeight ? '' : 'none'
+				dialog.style.touchAction = !isVerticalDrawer(this.#direction) ? 'pan-y' : dialog.scrollHeight > dialog.clientHeight ? '' : 'none'
 				dialog.getBoundingClientRect() // commit the closed transform so the open transition runs
 			}
 			this.dataset.state = 'open'

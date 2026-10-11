@@ -1,0 +1,18 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Scroll body">
+	<p>Scroll inside the drawer. The bottom sheet is dismissed from its handle (or from content scrolled back to the top on desktop); the sidebar scrolls vertically and is dragged left to close.</p>
+	<button class="tap" id="open" data-drawer-open="#bottom">Open bottom scroll</button>
+	<button class="tap" id="open-left" data-drawer-open="#left">Open left sidebar scroll</button>
+	<Drawer id="bottom" aria-labelledby="feed-title">
+		<h2 id="feed-title">Activity feed</h2>
+		{Array.from({ length: 50 }, (_, i) => <p>Feed item {i + 1}: portfolio update with enough text to make each row easy to drag and scroll.</p>)}
+	</Drawer>
+	<Drawer id="left" direction="left" aria-labelledby="nav-title">
+		<h2 id="nav-title">Navigation feed</h2>
+		{Array.from({ length: 50 }, (_, i) => <button class="tap">Workspace item {i + 1}</button>)}
+	</Drawer>
+</DemoLayout>

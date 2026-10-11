@@ -1,0 +1,32 @@
+---
+const { title, filler = true } = Astro.props
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<title>{title} · astro-drawer</title>
+		<style is:global>
+			:root { color-scheme: light dark; font: 17px/1.5 system-ui, sans-serif; }
+			body { margin: 0; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left)); }
+			main { max-width: 40rem; margin: 0 auto; }
+			.tap { display: block; box-sizing: border-box; width: 100%; min-height: 3rem; margin: 0.5rem 0; padding: 0.75rem 1rem; border: 1px solid rgb(128 128 128 / 0.35); border-radius: 0.75rem; background: rgb(128 128 128 / 0.08); color: inherit; font: inherit; text-align: left; text-decoration: none; }
+			.tap small { display: block; opacity: 0.7; }
+			/* pan-x: vertical swipes on the strip stay pointer events, so they still drag the sheet. */
+			.strip { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; touch-action: pan-x; }
+			.strip .tap { flex: none; width: auto; margin: 0; }
+			label { display: block; margin: 0.75rem 0; }
+			input, select { box-sizing: border-box; width: 100%; min-height: 3rem; font: inherit; }
+			.filler { opacity: 0.5; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<a class="tap" href="/demos/">All demos</a>
+			<h1>{title}</h1>
+			<slot />
+			{filler && <div class="filler">{Array.from({ length: 30 }, (_, i) => <p>Page filler {i + 1}, so the page behind the drawer scrolls.</p>)}</div>}
+		</main>
+	</body>
+</html>

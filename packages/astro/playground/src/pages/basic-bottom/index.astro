@@ -1,0 +1,17 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="Basic bottom">
+	<p>A modal bottom sheet: Escape, backdrop click and drag-to-dismiss close it, and focus returns to the trigger.</p>
+	<button class="tap" id="open" data-drawer-open="#drawer">Open bottom drawer</button>
+	<Drawer id="drawer" aria-labelledby="basic-title">
+		<h2 id="basic-title">Portfolio filters</h2>
+		<p>Choose the data you want to inspect.</p>
+		<button class="tap">Active positions</button>
+		<button class="tap">Watchlist</button>
+		<button class="tap">Earnings</button>
+		<button class="tap" data-drawer-close>Done</button>
+	</Drawer>
+</DemoLayout>

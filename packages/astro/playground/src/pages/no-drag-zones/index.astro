@@ -1,0 +1,17 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import DemoLayout from '../../layouts/DemoLayout.astro'
+---
+
+<DemoLayout title="No-drag zones">
+	<p>Elements inside <code>[data-drawer-no-drag]</code> never start a drag. A horizontal scroller keeps horizontal swipes; a vertical swipe on it still drags the sheet.</p>
+	<button class="tap" id="open" data-drawer-open="#drawer">Open no-drag demo</button>
+	<Drawer id="drawer" aria-labelledby="nodrag-title">
+		<h2 id="nodrag-title">Pointer-owned controls</h2>
+		<label data-drawer-no-drag>Allocation <input id="slider" type="range" min="0" max="100" value="40" /></label>
+		<div class="strip" id="strip">
+			{['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '2Y', '5Y', '10Y', 'Max'].map(label => <button class="tap">{label}</button>)}
+		</div>
+		<button class="tap" data-drawer-close>Done</button>
+	</Drawer>
+</DemoLayout>

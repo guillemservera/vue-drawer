@@ -3,16 +3,25 @@ import type { HTMLAttributes } from 'astro/types'
 // Relative path on purpose: this file ships as source and must only reach this package's built files.
 import '../dist/style.css'
 
-type Props = HTMLAttributes<'dialog'>
+type Props = HTMLAttributes<'dialog'> & {
+	/** Edge the drawer slides in from. Default `'bottom'`. */
+	direction?: 'top' | 'bottom' | 'left' | 'right'
+	/** `false`: Escape, backdrop click and drag do not close it; `close()` and `[data-drawer-close]` still do. Default `true`. */
+	dismissible?: boolean
+}
 
-// `id` and `open` belong to the custom element; everything else (aria-label, aria-labelledby, class...) to the sheet.
-const { id, open, ...attrs } = Astro.props
+// `id`, `open`, `direction` and `dismissible` belong to the custom element; everything else (aria-label, aria-labelledby, class...) to the sheet.
+const { id, open, direction, dismissible, ...attrs } = Astro.props
+// Sidebars get no handle (they are dragged from anywhere); a top sheet's handle sits at its bottom edge.
+const handleFirst = !direction || direction === 'bottom'
+// Astro drops `false` attributes, so non-dismissible must render the string "false".
 ---
 
-<astro-drawer id={id} open={open}>
+<astro-drawer id={id} open={open} direction={handleFirst ? undefined : direction} dismissible={dismissible === false ? 'false' : undefined}>
 	<dialog {...attrs}>
-		<div data-drawer-handle></div>
+		{handleFirst && <div data-drawer-handle></div>}
 		<slot />
+		{direction === 'top' && <div data-drawer-handle></div>}
 	</dialog>
 </astro-drawer>
 

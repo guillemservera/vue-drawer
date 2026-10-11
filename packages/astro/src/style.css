@@ -22,6 +22,33 @@ astro-drawer dialog::backdrop {
 	transition: opacity var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
+astro-drawer[direction='top'] dialog {
+	inset: 0 0 auto;
+	padding: var(--drawer-padding, max(1rem, env(safe-area-inset-top)) 1rem 0);
+	border-radius: var(--drawer-radius, 0 0 1rem 1rem);
+	transform: translateY(-100%);
+}
+
+astro-drawer:is([direction='left'], [direction='right']) dialog {
+	inset: 0 auto 0 0;
+	width: var(--drawer-width, min(20rem, 85vw));
+	height: auto;
+	max-height: none;
+	margin: 0;
+	/* Without this, overflow-y: auto makes overflow-x auto too, and a wide child would read as a horizontal scroller that owns every drag. */
+	overflow-x: hidden;
+	padding: var(--drawer-padding, max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)));
+	border-radius: var(--drawer-radius, 0 1rem 1rem 0);
+	transform: translateX(-100%);
+}
+
+astro-drawer[direction='right'] dialog {
+	inset: 0 0 0 auto;
+	border-radius: var(--drawer-radius, 1rem 0 0 1rem);
+	transform: translateX(100%);
+}
+
+/* After the direction rules: same specificity, so the open state must come last. */
 astro-drawer[data-state='open'] dialog {
 	transform: none;
 }

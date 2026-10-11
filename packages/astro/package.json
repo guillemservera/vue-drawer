@@ -1,7 +1,7 @@
 {
   "name": "@guillemservera/astro-drawer",
   "version": "0.1.0",
-  "description": "An ultra-light bottom-sheet drawer for Astro: a native <dialog> custom element with drag-to-dismiss, close animation and iOS-safe scroll lock. Zero framework runtime.",
+  "description": "An ultra-light drawer for Astro (bottom/top sheet or sidebar): a native <dialog> custom element with drag-to-dismiss, close animation and iOS-safe scroll lock. Zero framework runtime.",
   "type": "module",
   "license": "MIT",
   "author": "Guillem Servera",
@@ -52,6 +52,7 @@
     "withastro",
     "drawer",
     "bottom-sheet",
+    "sidebar",
     "sheet",
     "dialog",
     "custom-element",
