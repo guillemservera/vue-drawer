@@ -1,0 +1,14 @@
+{
+  "name": "@astro-drawer/playground",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0",
+    "build": "astro build",
+    "preview": "astro preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@guillemservera/astro-drawer": "workspace:*",
+    "astro": "^7.3.8"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "name": "@guillemservera/astro-drawer",
+  "version": "0.1.0",
+  "description": "An ultra-light bottom-sheet drawer for Astro: a native <dialog> custom element with drag-to-dismiss, close animation and iOS-safe scroll lock. Zero framework runtime.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Guillem Servera",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guillemservera/vue-drawer.git",
+    "directory": "packages/astro"
+  },
+  "bugs": {
+    "url": "https://github.com/guillemservera/vue-drawer/issues"
+  },
+  "homepage": "https://github.com/guillemservera/vue-drawer/tree/main/packages/astro#readme",
+  "files": [
+    "dist",
+    "src/Drawer.astro",
+    "README.md",
+    "LICENSE"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./Drawer.astro": "./src/Drawer.astro",
+    "./style.css": "./dist/style.css"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "astro": "^7.0.0"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.2",
+    "@types/node": "^22.20.4",
+    "astro": "^7.3.8",
+    "jsdom": "^30.1.1",
+    "publint": "0.3.24",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vite-plugin-dts": "^5.1.1",
+    "vitest": "^5.0.2"
+  },
+  "keywords": [
+    "astro",
+    "astro-component",
+    "withastro",
+    "drawer",
+    "bottom-sheet",
+    "sheet",
+    "dialog",
+    "custom-element",
+    "web-component"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.build.json && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "publint": "publint",
+    "pack:dry": "npm pack --dry-run",
+    "ci": "pnpm typecheck && pnpm test && pnpm build && pnpm publint && pnpm pack:dry"
+  }
+}

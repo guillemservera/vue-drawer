@@ -1,0 +1,48 @@
+astro-drawer dialog {
+	box-sizing: border-box;
+	inset: auto 0 0;
+	width: 100%;
+	max-width: var(--drawer-max-width, 100%);
+	max-height: var(--drawer-max-height, 90dvh);
+	margin: 0 auto;
+	padding: var(--drawer-padding, 0 1rem max(1rem, env(safe-area-inset-bottom)));
+	border: 0;
+	border-radius: var(--drawer-radius, 1rem 1rem 0 0);
+	background: var(--drawer-background, Canvas);
+	color: var(--drawer-color, CanvasText);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	transform: translateY(100%);
+	transition: transform var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+astro-drawer dialog::backdrop {
+	background: var(--drawer-backdrop, rgb(0 0 0 / 0.4));
+	opacity: 0;
+	transition: opacity var(--drawer-duration, 0.5s) var(--drawer-easing, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+astro-drawer[data-state='open'] dialog {
+	transform: none;
+}
+
+astro-drawer[data-state='open'] dialog::backdrop {
+	opacity: 1;
+}
+
+astro-drawer [data-drawer-handle] {
+	width: 2.5rem;
+	height: 0.3rem;
+	margin: 0.75rem auto;
+	border-radius: 1rem;
+	background: var(--drawer-handle-color, rgb(128 128 128 / 0.4));
+	cursor: grab;
+	touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	astro-drawer dialog,
+	astro-drawer dialog::backdrop {
+		transition: none;
+	}
+}

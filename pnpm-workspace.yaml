@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "packages/vue/playground"
+  - "packages/astro/playground"
 
 onlyBuiltDependencies:
   - esbuild

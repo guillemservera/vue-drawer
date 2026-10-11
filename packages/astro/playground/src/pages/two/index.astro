@@ -1,0 +1,13 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import Layout from '../../layouts/Layout.astro'
+---
+
+<Layout title="Page two">
+	<a id="back" href="/">Back to page one</a>
+	<button id="open" data-drawer-open="#drawer">Open drawer</button>
+	<Drawer id="drawer" aria-label="Second drawer">
+		<p>Second page drawer with long, scrollable content.</p>
+		{Array.from({ length: 40 }, (_, i) => <p>Drawer line {i + 1}</p>)}
+	</Drawer>
+</Layout>

@@ -1,0 +1,21 @@
+---
+import type { HTMLAttributes } from 'astro/types'
+// Relative path on purpose: this file ships as source and must only reach this package's built files.
+import '../dist/style.css'
+
+type Props = HTMLAttributes<'dialog'>
+
+// `id` and `open` belong to the custom element; everything else (aria-label, aria-labelledby, class...) to the sheet.
+const { id, open, ...attrs } = Astro.props
+---
+
+<astro-drawer id={id} open={open}>
+	<dialog {...attrs}>
+		<div data-drawer-handle></div>
+		<slot />
+	</dialog>
+</astro-drawer>
+
+<script>
+	import '../dist/index.js'
+</script>

@@ -1,0 +1,14 @@
+---
+import Drawer from '@guillemservera/astro-drawer/Drawer.astro'
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title="Page one">
+	<button id="open" data-drawer-open="#drawer">Open drawer</button>
+	<Drawer id="drawer" aria-labelledby="drawer-title">
+		<h2 id="drawer-title">Hello drawer</h2>
+		<p>Drag the handle or this content down, press Escape, or click the backdrop.</p>
+		<a id="nav" href="/two/">Go to page two (drawer still open)</a>
+		<button id="close" onclick="this.closest('astro-drawer').close()">Close</button>
+	</Drawer>
+</Layout>
