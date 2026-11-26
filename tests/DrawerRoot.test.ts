@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { defineComponent, nextTick, ref } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDrawerRootContext } from '../src/utils/drawerContext'
 import DrawerContent from '../src/components/DrawerContent.vue'
@@ -314,6 +314,23 @@ describe('DrawerRoot', () => {
 		probe.root.handleAfterClose()
 		expect(scrollLockOpen?.value).toBe(false)
 
+		wrapper.unmount()
+	})
+
+	it('releases scroll lock when content is removed in the same update that closes the drawer', async () => {
+		const open = ref(true)
+		const wrapper = mount(() => h(DrawerRoot, { open: open.value }, () =>
+			open.value ? h(DrawerContent, { 'aria-label': 'Test drawer' }) : null),
+		{ attachTo: document.body })
+		await nextTick()
+		const scrollLockOpen = scrollLockHarness.calls.at(-1)?.open
+		expect(scrollLockOpen?.value).toBe(true)
+
+		open.value = false
+		await nextTick()
+
+		expect(wrapper.find('[data-drawer-content]').exists()).toBe(false)
+		expect(scrollLockOpen?.value).toBe(false)
 		wrapper.unmount()
 	})
 

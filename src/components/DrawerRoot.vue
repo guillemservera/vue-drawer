@@ -311,7 +311,10 @@ function syncRestingStyles(options: SyncRestingStyleOptions = {}) {
 
 function registerContentElement(element: HTMLElement | null) {
 	contentElement.value = element
-	if (!element) return
+	if (!element) {
+		if (!open.value) scrollLockOpen.value = false
+		return
+	}
 
 	switch (props.direction) {
 		case 'bottom':
