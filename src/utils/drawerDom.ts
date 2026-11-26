@@ -33,6 +33,18 @@ export function isDrawerTransitionEnd(
 	return transitionPropertyName === propertyName || transitionPropertyName === 'all'
 }
 
+export function getDrawerTransitions(element: HTMLElement) {
+	return element.getAnimations?.().filter(animation =>
+		'transitionProperty' in animation
+		&& (animation.transitionProperty === 'transform' || animation.transitionProperty === 'opacity'),
+	) ?? []
+}
+
+export function getDrawerTransform(element: HTMLElement) {
+	const transform = getComputedStyle(element).transform
+	return transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null
+}
+
 /**
  * A nested modal layer above the drawer (a Radix/reka menu, popover or dialog) disables
  * `body` pointer events and owns every press outside itself: it dismisses on it. The

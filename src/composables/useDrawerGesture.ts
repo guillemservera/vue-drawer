@@ -10,7 +10,7 @@ import {
 	getTranslateStyles,
 	isVerticalDrawer,
 } from '../utils/drawerConstants'
-import { DRAWER_RECENT_OPEN_WINDOW_MS, restoreBodyPointerEvents, waitForDrawerTransition } from '../utils/drawerDom'
+import { DRAWER_RECENT_OPEN_WINDOW_MS, getDrawerTransform, getDrawerTransitions, restoreBodyPointerEvents, waitForDrawerTransition } from '../utils/drawerDom'
 import { getPointerPagePosition, resolvePointerDragIntent } from '../utils/drawerPointer'
 import { getOverlayOpacityForOffset, resolveSnapPointTarget } from '../utils/drawerSnapPoints'
 import type { DrawerDirection } from '../utils/drawerTypes'
@@ -45,7 +45,7 @@ interface UseDrawerGestureOptions {
 	getRestingOverlayOpacity: () => number
 	animateToSnapPoint: (index: number) => void
 	resetInteractiveState: () => void
-	onNestedDrag: (closeProgress: number) => void
+	onNestedDrag: (closeProgress: number, startProgress?: number) => void
 	onNestedRelease: (isStillOpen: boolean) => void
 }
 
@@ -102,6 +102,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	let closeTransitionVersion = 0
 	let gestureDrawerSize = 1
 	let gestureSnapPointsOffset: number[] = []
+	let dragOverlayOpacityOffset = 0
 
 	function cacheGestureMetrics() {
 		const drawerSize = hasSnapPoints.value ? getSnapPointBaseSize() : getVisibleDrawerSize()
@@ -153,6 +154,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		currentOffset.value = 0
 		gestureDrawerSize = 1
 		gestureSnapPointsOffset = []
+		dragOverlayOpacityOffset = 0
 		releaseCapturedPointer(captureElement, capturedPointerId)
 	}
 
@@ -275,7 +277,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		return openedAt.value !== null && Date.now() - openedAt.value < DRAWER_RECENT_OPEN_WINDOW_MS
 	}
 
-	function shouldAllowDrag(target: EventTarget | null, closeDistance: number) {
+	function shouldAllowDrag(target: EventTarget | null, closeDistance: number, moving: boolean) {
 		if (!dismissible.value && !hasSnapPoints.value) return false
 		if (!target || shouldIgnoreTarget(target)) return false
 
@@ -284,7 +286,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		}
 
 		const now = Date.now()
-		if (wasDrawerOpenedRecently()) return false
+		if (!moving && wasDrawerOpenedRecently()) return false
 
 		if (
 			currentOffset.value === dragBaseOffset.value
@@ -301,7 +303,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 
 		if (closeDistance <= 0) {
 			const canExpandSnapPoint = hasSnapPoints.value && activeSnapPointIndex.value < gestureSnapPointsOffset.length - 1
-			if (!canExpandSnapPoint) {
+			if (!canExpandSnapPoint && !moving) {
 				lastPreventedDragAt.value = now
 				return false
 			}
@@ -328,24 +330,29 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		return true
 	}
 
-	function setDraggingStyles(offset: number, drawerSize: number, snapPointsOffset: number[]) {
+	function getDragOverlayOpacity(offset: number) {
+		return hasSnapPoints.value
+			? getOverlayOpacityForOffset(offset, gestureSnapPointsOffset, fadeFromIndex.value)
+			: 1 - clamp(offset / gestureDrawerSize, 0, 1)
+	}
+
+	function setDraggingStyles(offset: number, startProgress?: number) {
 		const content = contentElement.value
 		if (!content) return
 
 		const overlay = overlayElement.value
-		const closeProgress = Math.min(Math.max(offset, 0) / drawerSize, 1)
+		const closeProgress = clamp(offset / gestureDrawerSize, 0, 1)
 
 		content.style.transition = 'none'
 		content.style.transform = getTranslateStyles(direction.value, offset)
 
 		if (overlay) {
 			overlay.style.transition = 'none'
-			overlay.style.opacity = hasSnapPoints.value
-				? `${getOverlayOpacityForOffset(offset, snapPointsOffset, fadeFromIndex.value)}`
-				: `${1 - closeProgress}`
+			const opacity = getDragOverlayOpacity(offset)
+			overlay.style.opacity = `${clamp(opacity + dragOverlayOpacityOffset, 0, 1)}`
 		}
 
-		onNestedDrag(closeProgress)
+		onNestedDrag(closeProgress, startProgress)
 	}
 
 	function clearInlineStyles(options: {
@@ -461,7 +468,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			if (transitionVersion !== closeTransitionVersion) {
 				return
 			}
-			// Keep the drawer non-interactive for the short Vue leave that follows the
+			// Keep the drawer non-interactive for the short leave that follows the
 			// gesture-owned close. Clearing pointer-events here lets the lingering overlay
 			// intercept taps during the leave window, which is exactly the regression we
 			// are trying to avoid.
@@ -470,10 +477,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 				preserveOpacity: true,
 				preservePointerEvents: true,
 			})
-			// IMPORTANT: Set skipCloseAnimation BEFORE gestureClosing. When gestureClosing
-			// becomes false, shouldRender becomes false, and Vue's <Transition> starts its
-			// leave animation reading shouldUseInstantLeave at that moment. If skipCloseAnimation
-			// isn't set yet, the Transition uses the normal leave instead of instant (1ms).
+			// The gesture already reached the exit target.
 			setSkipCloseAnimation(true)
 			setGestureClosing(false)
 		})
@@ -576,7 +580,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	}
 
 	function handlePointerMove(event: PointerEvent) {
-		if (pointerId.value !== event.pointerId || !contentElement.value) return
+		const content = contentElement.value
+		if (pointerId.value !== event.pointerId || !content) return
 		lastPointerEvent.value = event
 
 		const pointerStartPositionValue = pointerStartPosition.value
@@ -618,9 +623,25 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			hasExceededDragThreshold.value = true
 		}
 
+		let startProgress: number | undefined
 		if (!isAllowedToDrag.value) {
-			if (!shouldAllowDrag(pointerTarget.value, closeDistance)) {
+			const overlay = overlayElement.value
+			const moving = getDrawerTransitions(content).length > 0
+				|| Boolean(overlay && getDrawerTransitions(overlay).length)
+			if (!shouldAllowDrag(pointerTarget.value, closeDistance, moving)) {
 				return
+			}
+
+			if (moving) {
+				// Sample at drag activation, after the scroll and intent checks.
+				const matrix = getDrawerTransform(content)
+				const translation = isVerticalDrawer(direction.value) ? matrix?.m42 : matrix?.m41
+				dragBaseOffset.value = (translation ?? 0) * getCloseDirectionSign(direction.value)
+				startProgress = clamp(dragBaseOffset.value / gestureDrawerSize, 0, 1)
+				if (overlay) {
+					dragOverlayOpacityOffset = Number(getComputedStyle(overlay).opacity)
+						- getDragOverlayOpacity(dragBaseOffset.value)
+				}
 			}
 
 			// Match Vaul's scroll handoff: a gesture that starts while inner content
@@ -639,22 +660,28 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			const snapPointBaseSize = gestureDrawerSize
 			const minOffset = snapPointsOffset[snapPointsOffset.length - 1] ?? 0
 			const maxOffset = dismissible.value ? snapPointBaseSize : (snapPointsOffset[0] ?? dragBaseOffset.value)
-			const offset = clamp(dragBaseOffset.value + closeDistance, minOffset, maxOffset)
+			// An entering drawer can start beyond the usual snap limits.
+			const offset = clamp(
+				dragBaseOffset.value + closeDistance,
+				Math.min(minOffset, dragBaseOffset.value),
+				Math.max(maxOffset, dragBaseOffset.value),
+			)
 			currentOffset.value = offset
-			setDraggingStyles(offset, snapPointBaseSize, snapPointsOffset)
+			setDraggingStyles(offset, startProgress)
 			emitDrag(event, Math.min(Math.max(offset, 0) / snapPointBaseSize, 1))
 			return
 		}
 
 		const drawerSize = gestureDrawerSize
 		// Side drawers stay anchored at their open edge; only vertical sheets overdrag.
+		const distance = dragBaseOffset.value + closeDistance
 		const offset = !isVerticalDrawer(direction.value)
-			? Math.max(closeDistance, 0)
-			: closeDistance >= 0
-				? closeDistance
-				: -Math.max(dampenValue(-closeDistance), 0)
+			? Math.max(distance, 0)
+			: distance >= 0
+				? distance
+				: -Math.max(dampenValue(-distance), 0)
 		currentOffset.value = offset
-		setDraggingStyles(offset, drawerSize, [])
+		setDraggingStyles(offset, startProgress)
 		emitDrag(event, Math.min(Math.max(offset, 0) / drawerSize, 1))
 	}
 

@@ -123,11 +123,16 @@ describe('DrawerContent', () => {
 		})
 	}
 
-	it('passes the root initial animation flag to the transition appear prop', () => {
+	it('renders initially open content at rest when initial animation is disabled', async () => {
 		rootContext.shouldAnimateInitialOpen.value = false
-		const wrapper = mount(DrawerContent)
+		rootContext.handleAfterOpen.mockClear()
+		const wrapper = mountDrawerContent()
+		await wrapper.vm.$nextTick()
 
-		expect(wrapper.get('transition-stub').attributes('appear')).toBe('false')
+		const content = wrapper.get('[data-drawer-content]')
+		expect(content.attributes('data-state')).toBe('open')
+		expect(content.classes()).not.toContain('drawer-content-enter-active')
+		expect(rootContext.handleAfterOpen).not.toHaveBeenCalled()
 
 		wrapper.unmount()
 	})

@@ -73,6 +73,7 @@
     "build": "vue-tsc --noEmit -p tsconfig.build.json && vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
+    "test:browser": "node tests/browser/run.mjs",
     "test:watch": "vitest",
     "publint": "publint",
     "pack:dry": "npm pack --dry-run",

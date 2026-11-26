@@ -150,7 +150,7 @@ export interface DrawerRootContext {
 	setSkipCloseAnimation: (value: boolean) => void
 	setNestedChildOpen: (value: boolean, options?: { instant?: boolean }) => void
 	setNestedModalChildOpen: (value: boolean) => void
-	onNestedDrag: (closeProgress: number) => void
+	onNestedDrag: (closeProgress: number, startProgress?: number) => void
 	onNestedRelease: (isStillOpen: boolean) => void
 	resetInteractiveState: () => void
 	getContentTransition: (options?: { instant?: boolean, close?: boolean }) => string
