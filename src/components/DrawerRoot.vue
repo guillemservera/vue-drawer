@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import {
 	DRAWER_DEFAULT_CLOSE_THRESHOLD,
 	DRAWER_DEFAULT_CLOSE_TRANSITION_DURATION_MS,
@@ -69,6 +69,8 @@ const overlayElement = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const gestureClosing = ref(false)
 const scrollLockOpen = ref(props.open ?? props.defaultOpen)
+const closeCommitted = ref(false)
+const finishedLeaves = new Map<HTMLElement, (() => void) | undefined>()
 const shouldAnimateInitialOpen = ref(!props.defaultOpen)
 const skipCloseAnimation = ref(false)
 const closeAnimationOverride = ref<DrawerAnimation | null>(null)
@@ -86,6 +88,7 @@ const titleId = ref<string | undefined>()
 const descriptionId = ref<string | undefined>()
 let skipNextActiveSnapPointAnimation = false
 let nestedParentTransitionCleanup: (() => void) | null = null
+let settleCleanup: (() => void) | undefined
 let nestedDragProgressOffset = 0
 
 interface SyncRestingStyleOptions {
@@ -549,10 +552,22 @@ function animateToSnapPoint(index: number, options: { updateActiveSnapPoint?: bo
 		overlay.style.opacity = `${targetOverlayOpacity}`
 	}
 
-	waitForDrawerTransition(content, 'transform', () => {
-		if (!open.value) return
-		resetInteractiveState()
+	waitForSettle(content)
+}
+
+function waitForSettle(content: HTMLElement) {
+	cancelSettle()
+	settleCleanup = waitForDrawerTransition(content, 'transform', () => {
+		settleCleanup = undefined
+		if (open.value) resetInteractiveState()
 	})
+}
+
+function cancelSettle() {
+	if (!settleCleanup) return false
+	settleCleanup()
+	settleCleanup = undefined
+	return true
 }
 
 function handleDismissAttempt(event: Event) {
@@ -568,6 +583,7 @@ function handleContentError(error: unknown, instance: unknown, info: string) {
 }
 
 function resetInteractiveState() {
+	cancelSettle()
 	const content = contentElement.value
 	const overlay = overlayElement.value
 
@@ -625,6 +641,27 @@ function handleAfterOpen() {
 	emit('animation-end', true)
 }
 
+function handleSurfaceLeave(element: HTMLElement, afterClose?: () => void) {
+	finishedLeaves.set(element, afterClose)
+	commitCloseIfReady()
+}
+
+function commitCloseIfReady() {
+	if (open.value || closeCommitted.value || !finishedLeaves.size) return
+	const content = contentElement.value
+	const overlay = overlayElement.value
+	if ((content && !finishedLeaves.has(content)) || (overlay && !finishedLeaves.has(overlay))) return
+
+	const afterClose = content ? finishedLeaves.get(content) : undefined
+	finishedLeaves.clear()
+	closeCommitted.value = true
+	void nextTick(() => {
+		if (open.value || !closeCommitted.value) return
+		afterClose?.()
+		handleAfterClose()
+	})
+}
+
 function handleAfterClose() {
 	if (open.value) return
 	resetInteractiveState()
@@ -680,6 +717,7 @@ provideDrawerRootContext({
 	nestedModalChildOpen,
 	scalesParent,
 	gestureClosing,
+	closeCommitted,
 	skipCloseAnimation,
 	shouldAnimateInitialOpen,
 	preventCloseAutoFocusOnce,
@@ -703,8 +741,10 @@ provideDrawerRootContext({
 	syncRestingStyles,
 	setActiveSnapPointValue,
 	animateToSnapPoint,
+	waitForSettle,
+	cancelSettle,
 	handleAfterOpen,
-	handleAfterClose,
+	handleSurfaceLeave,
 	handleDismissAttempt,
 	handleContentError,
 	setGestureClosing,
@@ -758,6 +798,8 @@ watch(() => props.snapPoints, (snapPoints) => {
 
 watch(open, (value, previousValue) => {
 	if (value) {
+		closeCommitted.value = false
+		finishedLeaves.clear()
 		scrollLockOpen.value = true
 	}
 	else if (previousValue === true && (contentElement.value || gestureClosing.value)) {
@@ -772,6 +814,8 @@ watch(open, (value, previousValue) => {
 		emit('close')
 	}
 }, { flush: 'sync', immediate: true })
+
+watch([contentElement, overlayElement], commitCloseIfReady, { flush: 'post' })
 
 watch(activeSnapPoint, (value, previousValue) => {
 	if (value === previousValue) return

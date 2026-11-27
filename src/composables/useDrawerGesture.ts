@@ -12,7 +12,7 @@ import {
 } from '../utils/drawerConstants'
 import { DRAWER_RECENT_OPEN_WINDOW_MS, getDrawerTransform, getDrawerTransitions, restoreBodyPointerEvents, waitForDrawerTransition } from '../utils/drawerDom'
 import { getPointerPagePosition, resolvePointerDragIntent } from '../utils/drawerPointer'
-import { getOverlayOpacityForOffset, resolveSnapPointTarget } from '../utils/drawerSnapPoints'
+import { getClosestSnapPointIndex, getOverlayOpacityForOffset, resolveSnapPointTarget } from '../utils/drawerSnapPoints'
 import type { DrawerDirection } from '../utils/drawerTypes'
 
 interface UseDrawerGestureOptions {
@@ -44,6 +44,8 @@ interface UseDrawerGestureOptions {
 	getRestingOffset: () => number
 	getRestingOverlayOpacity: () => number
 	animateToSnapPoint: (index: number) => void
+	waitForSettle: (content: HTMLElement) => void
+	cancelSettle: () => boolean
 	resetInteractiveState: () => void
 	onNestedDrag: (closeProgress: number, startProgress?: number) => void
 	onNestedRelease: (isStillOpen: boolean) => void
@@ -79,6 +81,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		getRestingOffset,
 		getRestingOverlayOpacity,
 		animateToSnapPoint,
+		waitForSettle,
+		cancelSettle,
 		resetInteractiveState,
 		onNestedDrag,
 		onNestedRelease,
@@ -102,7 +106,10 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	let closeTransitionVersion = 0
 	let gestureDrawerSize = 1
 	let gestureSnapPointsOffset: number[] = []
-	let dragOverlayOpacityOffset = 0
+	let sampledOffset: number | undefined
+	let dragTransform: DOMMatrix | undefined
+	let dragOverlayStartOpacity: number | undefined
+	let previousContentOpacity: string | undefined
 
 	function cacheGestureMetrics() {
 		const drawerSize = hasSnapPoints.value ? getSnapPointBaseSize() : getVisibleDrawerSize()
@@ -154,7 +161,9 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		currentOffset.value = 0
 		gestureDrawerSize = 1
 		gestureSnapPointsOffset = []
-		dragOverlayOpacityOffset = 0
+		sampledOffset = undefined
+		dragTransform = undefined
+		dragOverlayStartOpacity = undefined
 		releaseCapturedPointer(captureElement, capturedPointerId)
 	}
 
@@ -331,6 +340,18 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	}
 
 	function getDragOverlayOpacity(offset: number) {
+		if (dragOverlayStartOpacity !== undefined) {
+			const start = dragBaseOffset.value
+			if (offset === start) return dragOverlayStartOpacity
+			const closing = offset > start
+			const canSlideOffscreen = dismissible.value || !hasSnapPoints.value
+			const closedOffset = canSlideOffscreen ? gestureDrawerSize : gestureSnapPointsOffset[0] ?? start
+			const end = closing ? closedOffset : gestureSnapPointsOffset.at(-1) ?? 0
+			const endOpacity = closing && canSlideOffscreen ? 0
+				: getOverlayOpacityForOffset(end, gestureSnapPointsOffset, fadeFromIndex.value)
+			const progress = clamp(Math.abs(offset - start) / Math.abs(end - start), 0, 1)
+			return dragOverlayStartOpacity + (endOpacity - dragOverlayStartOpacity) * progress
+		}
 		return hasSnapPoints.value
 			? getOverlayOpacityForOffset(offset, gestureSnapPointsOffset, fadeFromIndex.value)
 			: 1 - clamp(offset / gestureDrawerSize, 0, 1)
@@ -344,15 +365,33 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		const closeProgress = clamp(offset / gestureDrawerSize, 0, 1)
 
 		content.style.transition = 'none'
-		content.style.transform = getTranslateStyles(direction.value, offset)
+		if (dragTransform) {
+			const translation = offset * getCloseDirectionSign(direction.value)
+			if (isVerticalDrawer(direction.value)) dragTransform.m42 = translation
+			else dragTransform.m41 = translation
+			content.style.transform = dragTransform.toString()
+		}
+		else {
+			content.style.transform = getTranslateStyles(direction.value, offset)
+		}
 
 		if (overlay) {
 			overlay.style.transition = 'none'
-			const opacity = getDragOverlayOpacity(offset)
-			overlay.style.opacity = `${clamp(opacity + dragOverlayOpacityOffset, 0, 1)}`
+			overlay.style.opacity = `${getDragOverlayOpacity(offset)}`
 		}
 
 		onNestedDrag(closeProgress, startProgress)
+	}
+
+	function restoreContentOpacity(animate = false) {
+		const content = contentElement.value
+		if (!content || previousContentOpacity === undefined) return
+		if (animate) {
+			const opacityTransition = content.style.transition.replace(/^transform /, 'opacity ')
+			content.style.transition += `, ${opacityTransition}`
+		}
+		content.style.opacity = previousContentOpacity
+		previousContentOpacity = undefined
 	}
 
 	function clearInlineStyles(options: {
@@ -360,6 +399,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		preserveOpacity?: boolean
 		preservePointerEvents?: boolean
 	} = {}) {
+		restoreContentOpacity()
 		const {
 			preserveTransform = false,
 			preserveOpacity = false,
@@ -409,11 +449,21 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		preventCloseAutoFocusOnce.value = false
 	})
 
+	function releaseOpenMotion() {
+		if (cancelSettle() || isDragging.value) {
+			// Commit the currently rendered styles before the leave takes over.
+			void contentElement.value?.getBoundingClientRect()
+			clearInlineStyles()
+		}
+		if (pointerId.value !== null) cleanupGestureState()
+	}
+
 	function animateBackToOpen() {
 		const content = contentElement.value
 		if (!content) return
+		onNestedRelease(true)
 		const restingOffset = getRestingOffset()
-		if (currentOffset.value === restingOffset) {
+		if (currentOffset.value === restingOffset && !dragTransform && previousContentOpacity === undefined) {
 			resetInteractiveState()
 			return
 		}
@@ -422,19 +472,14 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 
 		content.style.transition = getContentTransition()
 		content.style.transform = getTranslateStyles(direction.value, restingOffset)
+		restoreContentOpacity(true)
 
 		if (overlay) {
 			overlay.style.transition = getOverlayTransition()
 			overlay.style.opacity = `${getRestingOverlayOpacity()}`
 		}
 
-		waitForDrawerTransition(content, 'transform', () => {
-			if (!open.value) return
-			clearInlineStyles()
-			resetInteractiveState()
-		})
-
-		onNestedRelease(true)
+		waitForSettle(content)
 	}
 
 	function animateCloseFromGesture() {
@@ -456,6 +501,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 
 		content.style.transition = getContentTransition({ close: true })
 		content.style.transform = getClosedTransform(direction.value)
+		restoreContentOpacity(true)
 
 		if (overlay) {
 			overlay.style.transition = getOverlayTransition({ close: true })
@@ -504,9 +550,12 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			currentOffset.value = resolvedOffset
 
 			const target = resolveSnapPointTarget({
-				activeSnapPointIndex: activeSnapPointIndex.value,
+				activeSnapPointIndex: sampledOffset === undefined
+					? activeSnapPointIndex.value
+					: getClosestSnapPointIndex(sampledOffset, snapPointsOffset),
 				closeThreshold: closeThreshold.value,
 				currentOffset: resolvedOffset,
+				startOffset: sampledOffset,
 				dismissible: dismissible.value,
 				drawerSize,
 				snapPointsOffset,
@@ -521,6 +570,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 			else if (target.index >= 0) {
 				emitRelease(event, true)
 				animateToSnapPoint(target.index)
+				restoreContentOpacity(true)
 				onNestedRelease(true)
 			}
 			else {
@@ -626,7 +676,8 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		let startProgress: number | undefined
 		if (!isAllowedToDrag.value) {
 			const overlay = overlayElement.value
-			const moving = getDrawerTransitions(content).length > 0
+			const contentTransitions = getDrawerTransitions(content)
+			const moving = contentTransitions.length > 0
 				|| Boolean(overlay && getDrawerTransitions(overlay).length)
 			if (!shouldAllowDrag(pointerTarget.value, closeDistance, moving)) {
 				return
@@ -634,15 +685,27 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 
 			if (moving) {
 				// Sample at drag activation, after the scroll and intent checks.
-				const matrix = getDrawerTransform(content)
-				const translation = isVerticalDrawer(direction.value) ? matrix?.m42 : matrix?.m41
-				dragBaseOffset.value = (translation ?? 0) * getCloseDirectionSign(direction.value)
-				startProgress = clamp(dragBaseOffset.value / gestureDrawerSize, 0, 1)
+				const transform = getDrawerTransform(content)
+				const vertical = isVerticalDrawer(direction.value)
+				const translation = vertical ? transform?.m42 : transform?.m41
+				sampledOffset = (translation ?? 0) * getCloseDirectionSign(direction.value)
+				dragBaseOffset.value = sampledOffset
+				startProgress = clamp(sampledOffset / gestureDrawerSize, 0, 1)
+				if (transform) {
+					const remainingTransform = DOMMatrix.fromMatrix(transform)
+					if (vertical) remainingTransform.m42 = 0
+					else remainingTransform.m41 = 0
+					if (!remainingTransform.isIdentity) dragTransform = remainingTransform
+				}
 				if (overlay) {
-					dragOverlayOpacityOffset = Number(getComputedStyle(overlay).opacity)
-						- getDragOverlayOpacity(dragBaseOffset.value)
+					dragOverlayStartOpacity = Number(getComputedStyle(overlay).opacity)
+				}
+				if (contentTransitions.some(transition => 'transitionProperty' in transition && transition.transitionProperty === 'opacity')) {
+					previousContentOpacity = content.style.opacity
+					content.style.opacity = getComputedStyle(content).opacity
 				}
 			}
+			cancelSettle()
 
 			// Match Vaul's scroll handoff: a gesture that starts while inner content
 			// is scrolling can become a drawer drag later in the same touch sequence.
@@ -716,6 +779,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 	}
 
 	onBeforeUnmount(() => {
+		cancelSettle()
 		clearInlineStyles()
 		cleanupGestureState()
 	})
@@ -726,7 +790,7 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		handlePointerUp,
 		handlePointerCancel,
 		handleLostPointerCapture,
-		clearInlineStyles,
+		releaseOpenMotion,
 	}
 }
 

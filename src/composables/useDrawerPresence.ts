@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, getCurrentInstance, onBeforeMount, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { getDrawerTransitions } from '../utils/drawerDom'
 import type { DrawerRootContext } from '../utils/drawerTypes'
@@ -7,12 +7,18 @@ export function useDrawerPresence(
 	root: DrawerRootContext,
 	element: Ref<HTMLElement | null>,
 	part: 'content' | 'overlay',
-	hooks?: { afterOpen: () => void, afterClose: () => void },
+	hooks?: { afterOpen: () => void, afterClose: () => void, beforeLeave: () => void },
 ) {
-	const present = ref(root.open.value || root.gestureClosing.value)
-	const phase = ref<'enter-from' | 'enter' | 'leave' | null>(
-		root.open.value && root.shouldAnimateInitialOpen.value ? 'enter-from' : null,
-	)
+	const hasBeenPresent = ref(root.open.value || root.gestureClosing.value)
+	const present = computed(() => root.open.value || (hasBeenPresent.value && !root.closeCommitted.value))
+	const phase = ref<'enter-from' | 'enter' | 'leave' | null>(null)
+	const instance = getCurrentInstance()
+	onBeforeMount(() => {
+		// Vue attaches the server DOM to the vnode before mounting a hydrated component.
+		if (!instance?.vnode.el && root.open.value && root.shouldAnimateInitialOpen.value) {
+			phase.value = 'enter-from'
+		}
+	})
 	const name = `drawer-${part}`
 	const closeAnimation = computed(() => root.closeAnimationOverride.value ?? root.closeAnimation.value)
 	const fadeLeaveTransform = ref<string>()
@@ -35,15 +41,16 @@ export function useDrawerPresence(
 	watch([() => root.open.value, () => root.gestureClosing.value], ([open, gestureClosing], [wasOpen]) => {
 		if (open && !wasOpen) {
 			fadeLeaveTransform.value = undefined
-			phase.value = present.value ? 'enter' : 'enter-from'
-			present.value = true
+			phase.value = element.value ? 'enter' : 'enter-from'
+			hasBeenPresent.value = true
 		}
 		else if (!open && !gestureClosing && present.value) {
 			const node = element.value
-			if (part === 'content' && closeAnimation.value === 'fade' && phase.value === 'enter' && node) {
-				// A fade leave holds the position at which it interrupted the enter.
+			if (part === 'content' && closeAnimation.value === 'fade' && node && phase.value !== 'leave') {
+				// Hold the rendered position through the fade, including when it interrupts another motion.
 				fadeLeaveTransform.value = getComputedStyle(node).transform
 			}
+			hooks?.beforeLeave()
 			phase.value = 'leave'
 		}
 	})
@@ -64,19 +71,16 @@ export function useDrawerPresence(
 			let canceled = false
 			onCleanup(() => { canceled = true })
 			const finish = () => {
-				phase.value = null
 				if (entering) {
+					phase.value = null
 					hooks?.afterOpen()
 				}
 				else {
-					present.value = false
-					void nextTick(() => {
-						if (!root.open.value) hooks?.afterClose()
-					})
+					root.handleSurfaceLeave(node, hooks?.afterClose)
 				}
 			}
 			const waitForMotion = () => {
-				if (canceled || entering !== root.open.value) return
+				if (canceled || entering !== root.open.value || (entering && root.isDragging.value)) return
 				const transitions = getDrawerTransitions(node).filter(transition => transition.playState !== 'finished')
 				if (transitions.length) {
 					void Promise.allSettled(transitions.map(transition => transition.finished)).then(waitForMotion)

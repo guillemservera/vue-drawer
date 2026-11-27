@@ -113,6 +113,30 @@ describe('DrawerHandle', () => {
 		wrapper.unmount()
 	})
 
+	it.each([false, true])('discards a queued handle tap on close (reopen: %s)', async (reopen) => {
+		const wrapper = await mountHarness()
+		const vm = wrapper.vm as unknown as { open: boolean, activeSnapPoint: DrawerSnapPoint }
+		const content = wrapper.get('[data-drawer-content]').element
+		Object.defineProperty(content, 'getAnimations', {
+			value: () => [{ transitionProperty: 'transform', finished: new Promise(() => {}) }],
+		})
+
+		await wrapper.get('[data-drawer-handle]').trigger('click')
+		vm.open = false
+		await nextTick()
+		expect(wrapper.get('[data-drawer-content]').element).toBe(content)
+		if (reopen) {
+			vm.open = true
+			await nextTick()
+		}
+
+		vi.advanceTimersByTime(120)
+		await nextTick()
+
+		expect(vm.activeSnapPoint).toBe('80px')
+		wrapper.unmount()
+	})
+
 	it('closes from the last snap point when the drawer is dismissible', async () => {
 		const wrapper = await mountHarness()
 		;(wrapper.vm as unknown as { activeSnapPoint: DrawerSnapPoint | null }).activeSnapPoint = 1

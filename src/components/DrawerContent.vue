@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onErrorCaptured, ref, useAttrs, watch } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
+import type { ComponentPublicInstance, HTMLAttributes } from 'vue'
 import { useDrawerAriaIsolation } from '../composables/useDrawerAriaIsolation'
 import { useDrawerDismissableLayer } from '../composables/useDrawerDismissableLayer'
 import { useDrawerFocusScope } from '../composables/useDrawerFocusScope'
@@ -64,6 +64,7 @@ const {
 	handlePointerUp,
 	handlePointerCancel,
 	handleLostPointerCapture,
+	releaseOpenMotion,
 } = useDrawerGesture({
 	open: root.open,
 	openedAt: root.openedAt,
@@ -93,6 +94,8 @@ const {
 	getRestingOffset: root.getRestingOffset,
 	getRestingOverlayOpacity: root.getRestingOverlayOpacity,
 	animateToSnapPoint: root.animateToSnapPoint,
+	waitForSettle: root.waitForSettle,
+	cancelSettle: root.cancelSettle,
 	resetInteractiveState: root.resetInteractiveState,
 	onNestedDrag: (closeProgress, startProgress) => {
 		if (root.scalesParent.value) root.parentContext?.onNestedDrag(closeProgress, startProgress)
@@ -105,6 +108,7 @@ const contentRef = ref<HTMLElement | null>(null)
 const { present, motionClasses, closeAnimation, fadeLeaveTransform } = useDrawerPresence(root, contentRef, 'content', {
 	afterOpen: handleAfterEnter,
 	afterClose: handleAfterLeave,
+	beforeLeave: releaseOpenMotion,
 })
 const contentAnimation = computed(() => root.open.value ? root.animation.value : closeAnimation.value)
 
@@ -197,7 +201,6 @@ function handleAfterLeave() {
 	if (root.open.value) return
 	focusScope.handleAfterClose()
 	root.preventCloseAutoFocusOnce.value = false
-	root.handleAfterClose()
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -295,6 +298,7 @@ function handleTrackedLostPointerCapture(event: PointerEvent) {
 		:aria-modal="root.modal.value ? 'true' : undefined"
 		:aria-labelledby="resolvedAriaLabelledBy"
 		:aria-describedby="resolvedAriaDescribedBy"
+		:inert="root.open.value ? (attrs.inert as HTMLAttributes['inert']) : true"
 		tabindex="-1"
 		data-drawer-content=""
 		:data-snap-points="root.hasSnapPoints.value ? 'true' : 'false'"

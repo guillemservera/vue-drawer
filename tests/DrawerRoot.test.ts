@@ -311,7 +311,10 @@ describe('DrawerRoot', () => {
 		expect(probe.root.open.value).toBe(false)
 		expect(scrollLockOpen?.value).toBe(true)
 
-		probe.root.handleAfterClose()
+		probe.root.handleSurfaceLeave(probe.root.contentElement.value!)
+		expect(scrollLockOpen?.value).toBe(true)
+		probe.root.handleSurfaceLeave(probe.root.overlayElement.value!)
+		await nextTick()
 		expect(scrollLockOpen?.value).toBe(false)
 
 		wrapper.unmount()

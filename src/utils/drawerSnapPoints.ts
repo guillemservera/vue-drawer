@@ -5,6 +5,7 @@ interface ResolveSnapPointTargetOptions {
 	activeSnapPointIndex: number
 	closeThreshold: number
 	currentOffset: number
+	startOffset?: number
 	dismissible: boolean
 	drawerSize: number
 	snapPointsOffset: number[]
@@ -88,6 +89,7 @@ export function resolveSnapPointTarget(options: ResolveSnapPointTargetOptions) {
 		activeSnapPointIndex,
 		closeThreshold,
 		currentOffset,
+		startOffset,
 		dismissible,
 		drawerSize,
 		snapPointsOffset,
@@ -112,10 +114,11 @@ export function resolveSnapPointTarget(options: ResolveSnapPointTargetOptions) {
 		}
 	}
 
-	const firstVisibleSize = Math.max(drawerSize - firstOffset, 1)
-	const dismissOffset = firstOffset + firstVisibleSize * closeThreshold
+	const dismissFromOffset = Math.max(firstOffset, startOffset ?? firstOffset)
+	const visibleSize = Math.max(drawerSize - dismissFromOffset, 1)
+	const dismissOffset = dismissFromOffset + visibleSize * closeThreshold
 
-	if (dismissible && currentOffset >= dismissOffset) {
+	if (dismissible && currentOffset >= dismissOffset && (startOffset === undefined || currentOffset > startOffset)) {
 		return { type: 'close' as const }
 	}
 
