@@ -1,6 +1,6 @@
 import { createApp, h, nextTick, ref } from 'vue'
 import type { DrawerDirection, DrawerSnapPoint } from '../../src'
-import { DrawerContent, DrawerOverlay, DrawerPortal, DrawerRoot, DrawerRootNested } from '../../src'
+import { DrawerClose, DrawerContent, DrawerOverlay, DrawerPortal, DrawerRoot, DrawerRootNested, DrawerTrigger } from '../../src'
 
 const frame = () => new Promise<number>(resolve => requestAnimationFrame(resolve))
 
@@ -37,13 +37,14 @@ function harness(nested = false, options: {
 	animation?: 'fade'
 	closeAnimation?: 'fade'
 	reduced?: boolean
+	uncontrolled?: boolean
 	direction?: DrawerDirection
 	snapPoints?: DrawerSnapPoint[]
 	contentStyle?: Record<string, string>
 	overlayStyle?: Record<string, string>
 	parentStyle?: Record<string, string>
 } = {}) {
-	const { reduced, contentStyle, overlayStyle, parentStyle, ...rootOptions } = options
+	const { reduced, uncontrolled, contentStyle, overlayStyle, parentStyle, ...rootOptions } = options
 	const side = rootOptions.direction === 'right'
 	const open = ref(false)
 	const events: boolean[] = []
@@ -56,7 +57,11 @@ function harness(nested = false, options: {
 			id: 'content',
 			'aria-label': 'Test drawer',
 			'data-reduced-motion': reduced ? 'fade' : undefined,
-		}, () => [h('input', { 'aria-label': 'Test input' }), h('div', { style: { height: '900px' } })]),
+		}, () => [
+			h('input', { 'aria-label': 'Test input' }),
+			uncontrolled ? h(DrawerClose, { id: 'close' }, () => 'Close') : null,
+			h('div', { style: { height: '900px' } }),
+		]),
 	]
 	const state = {
 		'onUpdate:open': (value: boolean) => { open.value = value },
@@ -66,13 +71,17 @@ function harness(nested = false, options: {
 		? h(DrawerRoot, { defaultOpen: true, preventScroll: false, direction: rootOptions.direction }, () =>
 			h(DrawerContent, { class: ['test-content test-linear', side && 'test-right'], style: parentStyle, id: 'parent', 'aria-label': 'Parent drawer' }, () =>
 				h(DrawerRootNested, { ...state, ...rootOptions, open: open.value }, () => h(DrawerPortal, null, drawer))))
-		: h(DrawerRoot, { ...state, ...rootOptions, open: open.value, preventScroll: false }, () => h(DrawerPortal, null, drawer)))
+		: h(DrawerRoot, { ...state, ...rootOptions, open: uncontrolled ? undefined : open.value, preventScroll: uncontrolled ?? false }, () => [
+			uncontrolled ? h(DrawerTrigger, { id: 'trigger' }, () => 'Open') : null,
+			h(DrawerPortal, null, drawer),
+		]))
 	app.mount(fixture)
 
 	return {
 		events,
 		setOpen: async (value: boolean) => {
-			open.value = value
+			if (uncontrolled) surface(value ? '#trigger' : '#close').click()
+			else open.value = value
 			await nextTick()
 		},
 		dispose: () => {
@@ -111,12 +120,16 @@ async function opening(fixture: Fixture, specs: (content: HTMLElement, overlay: 
 	return { content, overlay }
 }
 
+let touchActive = false
+
 async function touch(type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel', point?: { x: number, y: number }) {
+	if (type === 'touchStart') touchActive = true
 	const response = await fetch('/__drawer_test_touch', {
 		method: 'POST',
 		body: JSON.stringify({ type, touchPoints: point ? [point] : [] }),
 	})
 	assert(response.ok, await response.text())
+	if (type === 'touchEnd' || type === 'touchCancel') touchActive = false
 }
 
 async function pickup(content: HTMLElement, dx: number, dy: number, roomY = 0) {
@@ -318,11 +331,43 @@ async function interruptSettle(fixture: Fixture, close: boolean) {
 }
 
 async function pullOpenPastDismissThreshold(fixture: Fixture) {
-	const { content } = await opening(fixture, content => [[content, 'transform']])
-	assert(motion(content).offset > innerHeight * 0.75, 'Test must pick up beyond the dismissal threshold')
-	await pickup(content, 0, -12)
+	const { content, overlay } = await opening(fixture, content => [[content, 'transform']])
+	const start = motion(content).offset
+	const fadeStart = innerHeight * 0.6
+	const fadeEnd = innerHeight * 0.15
+	assert(start > innerHeight * 0.75, 'Test must pick up beyond the dismissal threshold')
+	const move = await pickup(content, 0, -12)
+	assert(motion(content).offset > fadeStart, 'The opening pull must still be below the first snap point')
+	near(motion(overlay).opacity, 0, 0.001, 'Overlay before the fade threshold')
+	await move(0, Math.round((fadeStart + fadeEnd) / 2 - start))
+	near(motion(overlay).opacity, (fadeStart - motion(content).offset) / (fadeStart - fadeEnd), 0.01, 'Overlay inside the snap fade range')
+	await move(0, -12)
 	await touch('touchEnd')
 	assert(content.dataset.state === 'open', 'An opening pull must not dismiss a drawer beyond its first snap point')
+}
+
+async function recloseInSameTick(fixture: Fixture) {
+	const { overflow } = document.documentElement.style
+	await fixture.setOpen(true)
+	await framesUntil(() => fixture.events.includes(true))
+	const content = surface('#content')
+	const overlay = surface('#overlay')
+	await fixture.setOpen(false)
+	const [contentExit, overlayExit] = await transitions([content, 'transform'], [overlay, 'opacity'])
+	overlayExit.pause()
+	contentExit.finish()
+	await frame()
+	assert(content.isConnected && overlay.isConnected, 'The longer overlay exit must still be pending')
+	assert(document.documentElement.style.overflow === 'hidden', 'Scrolling must stay locked through the exit')
+	surface('#trigger').click()
+	surface('#close').click()
+	await nextTick()
+	overlayExit.finish()
+	await overlayExit.finished
+	await frame()
+	assert(!content.isConnected && !overlay.isConnected, 'Both surfaces must unmount after the overlay finishes')
+	assert(document.documentElement.style.overflow === overflow, 'Scroll lock must be released after both exits')
+	assert(fixture.events.join() === 'true,false', 'The close must complete once after both surfaces leave')
 }
 
 async function staggeredExit(fixture: Fixture, shortPart: 'content' | 'overlay', reopen: boolean) {
@@ -391,10 +436,39 @@ async function cancelNestedAtRest(fixture: Fixture) {
 	await hold(0.05, [parent, 'transform'])
 	await pickup(content, -245, 0)
 	assert(motion(content).x === 0, 'Child must reach its open position before cancel')
+	near(motion(parent).scale, 1 - 16 / innerWidth, 0.001, 'Parent scale while the child is held fully open')
 	await touch('touchCancel')
 	assert(parent.style.transition !== 'none', 'Cancel must return the parent to its open-child transition')
 	await framesUntil(() => parent.getAnimations().length === 0)
 	near(motion(parent).scale, 1 - 16 / innerWidth, 0.001, 'Parent scale with its child open')
+}
+
+async function dragNestedOffscreen(fixture: Fixture) {
+	const parent = surface('#parent')
+	const { content } = await opening(fixture, content => [[content, 'transform']])
+	await framesUntil(() => !transition(parent, 'transform'))
+	assert(motion(parent).scale < 1, 'Parent must finish scaling before the child is picked up')
+	const move = await pickup(content, 0, 12)
+	await move(0, Math.ceil(300 - motion(content).offset + 24))
+	assert(motion(content).offset > 300, 'Child must be dragged beyond its closed position')
+	near(motion(parent).scale, 1, 0.001, 'Parent scale while the child is held offscreen')
+	near(motion(parent).offset, 0, 0.1, 'Parent offset while the child is held offscreen')
+	await touch('touchCancel')
+}
+
+async function recoverFromFailedTouch(fixture: Fixture) {
+	const failure = new Error('Injected failure after trusted touch pickup')
+	try {
+		await runCase(() => harness(), async (failedFixture) => {
+			const { content } = await opening(failedFixture)
+			await pickup(content, 0, 12)
+			throw failure
+		})
+	}
+	catch (error) {
+		if (error !== failure) throw error
+	}
+	await dragMidEnter(fixture, false)
 }
 
 function timing(element: HTMLElement, property: string, duration: number | undefined, easing: string) {
@@ -461,6 +535,9 @@ const cases: [string, () => Fixture, (fixture: Fixture) => Promise<void>][] = [
 	['complete close after both surfaces exit', () => harness(false, {
 		contentStyle: { '--drawer-close-duration': '80ms' },
 	}), fixture => staggeredExit(fixture, 'content', false)],
+	['reopen and reclose in the same tick after content exits', () => harness(false, {
+		uncontrolled: true, contentStyle: { '--drawer-close-duration': '80ms' },
+	}), recloseInSameTick],
 	['pick up a fading side drawer', () => harness(false, {
 		direction: 'right', animation: 'fade', contentStyle: { '--drawer-fade-enter-offset': '40px' },
 	}), pickUpFade],
@@ -470,20 +547,35 @@ const cases: [string, () => Fixture, (fixture: Fixture) => Promise<void>][] = [
 	['cancel a nested drag at the open position', () => harness(true, {
 		direction: 'right', parentStyle: { '--drawer-duration': '900ms', '--drawer-duration-ms': '900' },
 	}), cancelNestedAtRest],
+	['drag a nested child offscreen with a faster parent enter', () => harness(true, {
+		parentStyle: { '--drawer-duration': '80ms', '--drawer-duration-ms': '80' },
+	}), dragNestedOffscreen],
+	['pick up with trusted touch after a failed drag case', () => harness(), recoverFromFailedTouch],
 ]
 
-const results = []
-for (const [name, makeFixture, run] of cases) {
+async function runCase(makeFixture: () => Fixture, run: (fixture: Fixture) => Promise<void>) {
 	const fixture = makeFixture()
 	try {
 		await run(fixture)
+	}
+	finally {
+		try {
+			if (touchActive) await touch('touchCancel')
+		}
+		finally {
+			fixture.dispose()
+		}
+	}
+}
+
+const results = []
+for (const [name, makeFixture, run] of cases) {
+	try {
+		await runCase(makeFixture, run)
 		results.push({ name })
 	}
 	catch (error) {
 		results.push({ name, error: String(error) })
-	}
-	finally {
-		fixture.dispose()
 	}
 }
 await fetch('/__drawer_test_results', { method: 'POST', body: JSON.stringify(results) })

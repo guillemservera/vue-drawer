@@ -339,22 +339,26 @@ export function useDrawerGesture(options: UseDrawerGestureOptions) {
 		return true
 	}
 
-	function getDragOverlayOpacity(offset: number) {
-		if (dragOverlayStartOpacity !== undefined) {
-			const start = dragBaseOffset.value
-			if (offset === start) return dragOverlayStartOpacity
-			const closing = offset > start
-			const canSlideOffscreen = dismissible.value || !hasSnapPoints.value
-			const closedOffset = canSlideOffscreen ? gestureDrawerSize : gestureSnapPointsOffset[0] ?? start
-			const end = closing ? closedOffset : gestureSnapPointsOffset.at(-1) ?? 0
-			const endOpacity = closing && canSlideOffscreen ? 0
-				: getOverlayOpacityForOffset(end, gestureSnapPointsOffset, fadeFromIndex.value)
-			const progress = clamp(Math.abs(offset - start) / Math.abs(end - start), 0, 1)
-			return dragOverlayStartOpacity + (endOpacity - dragOverlayStartOpacity) * progress
-		}
+	function getDragOverlayCurveOpacity(offset: number) {
 		return hasSnapPoints.value
 			? getOverlayOpacityForOffset(offset, gestureSnapPointsOffset, fadeFromIndex.value)
 			: 1 - clamp(offset / gestureDrawerSize, 0, 1)
+	}
+
+	function getDragOverlayOpacity(offset: number) {
+		const opacity = getDragOverlayCurveOpacity(offset)
+		if (dragOverlayStartOpacity === undefined) return opacity
+		const start = dragBaseOffset.value
+		if (offset === start) return dragOverlayStartOpacity
+		const closing = offset > start
+		const canSlideOffscreen = dismissible.value || !hasSnapPoints.value
+		const closedOffset = canSlideOffscreen ? gestureDrawerSize : gestureSnapPointsOffset[0] ?? start
+		const end = closing ? closedOffset : gestureSnapPointsOffset.at(-1) ?? 0
+		const progress = clamp(Math.abs(offset - start) / Math.abs(end - start), 0, 1)
+		const startCorrection = dragOverlayStartOpacity - getDragOverlayCurveOpacity(start)
+		// A snap curve that starts fully opaque still has to reach zero offscreen.
+		const endCorrection = closing && canSlideOffscreen ? -getDragOverlayCurveOpacity(end) : 0
+		return clamp(opacity + startCorrection * (1 - progress) + endCorrection * progress, 0, 1)
 	}
 
 	function setDraggingStyles(offset: number, startProgress?: number) {

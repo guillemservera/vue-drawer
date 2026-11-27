@@ -89,7 +89,7 @@ const descriptionId = ref<string | undefined>()
 let skipNextActiveSnapPointAnimation = false
 let nestedParentTransitionCleanup: (() => void) | null = null
 let settleCleanup: (() => void) | undefined
-let nestedDragProgressOffset = 0
+let nestedDragStart: { childProgress: number, parentProgress: number } | undefined
 
 interface SyncRestingStyleOptions {
 	overlayOpacity?: number
@@ -416,7 +416,7 @@ function cancelNestedParentTransition() {
 
 function clearNestedParentTransform() {
 	cancelNestedParentTransition()
-	nestedDragProgressOffset = 0
+	nestedDragStart = undefined
 	nestedChildOpen.value = false
 
 	const content = contentElement.value
@@ -437,7 +437,7 @@ function applyNestedParentTransformIfNeeded(options: { instant?: boolean } = {})
 function setNestedChildOpen(value: boolean, options: { instant?: boolean } = {}) {
 	if (nestedChildOpen.value === value) return
 	nestedChildOpen.value = value
-	nestedDragProgressOffset = 0
+	nestedDragStart = undefined
 
 	const content = contentElement.value
 	if (!content) return
@@ -483,11 +483,18 @@ function onNestedDrag(closeProgress: number, startProgress?: number) {
 		// The parent's own timing may put it at a different progress than the child.
 		const restingScale = getNestedParentScale()
 		const renderedScale = getDrawerTransform(content)?.a ?? 1
-		const renderedProgress = clamp((renderedScale - restingScale) / (1 - restingScale), 0, 1)
-		nestedDragProgressOffset = renderedProgress - startProgress
+		const parentProgress = clamp((renderedScale - restingScale) / (1 - restingScale), 0, 1)
+		nestedDragStart = { childProgress: startProgress, parentProgress }
+	}
+	let parentProgress = closeProgress
+	if (nestedDragStart && closeProgress > 0 && closeProgress < 1) {
+		const { childProgress, parentProgress: start } = nestedDragStart
+		parentProgress = closeProgress <= childProgress
+			? start * (closeProgress / childProgress)
+			: start + (1 - start) * ((closeProgress - childProgress) / (1 - childProgress))
 	}
 	content.style.transition = 'none'
-	content.style.transform = getNestedCompositeTransform(closeProgress + nestedDragProgressOffset)
+	content.style.transform = getNestedCompositeTransform(parentProgress)
 }
 
 function onNestedRelease(isStillOpen: boolean) {
@@ -495,7 +502,7 @@ function onNestedRelease(isStillOpen: boolean) {
 	if (!content) return
 
 	cancelNestedParentTransition()
-	nestedDragProgressOffset = 0
+	nestedDragStart = undefined
 
 	if (!isStillOpen) {
 		nestedChildOpen.value = false
@@ -798,8 +805,6 @@ watch(() => props.snapPoints, (snapPoints) => {
 
 watch(open, (value, previousValue) => {
 	if (value) {
-		closeCommitted.value = false
-		finishedLeaves.clear()
 		scrollLockOpen.value = true
 	}
 	else if (previousValue === true && (contentElement.value || gestureClosing.value)) {
@@ -902,6 +907,10 @@ onMounted(() => {
 
 watch(open, (isOpen) => {
 	if (isOpen) {
+		// Presence also observes batched open changes, so same-tick toggles keep the current leave.
+		closeCommitted.value = false
+		finishedLeaves.clear()
+
 		if (scalesParent.value) {
 			parentContext?.setNestedChildOpen(true)
 		}
