@@ -119,6 +119,7 @@ export interface DrawerRootContext {
 	/** Nested drawers: this drawer scales its parent back while open (`scaleParent`). */
 	scalesParent: Readonly<Ref<boolean>>
 	gestureClosing: Ref<boolean>
+	closeCommitted: Ref<boolean>
 	skipCloseAnimation: Ref<boolean>
 	shouldAnimateInitialOpen: Ref<boolean>
 	preventCloseAutoFocusOnce: Ref<boolean>
@@ -142,15 +143,17 @@ export interface DrawerRootContext {
 	syncRestingStyles: (options?: { overlayOpacity?: number, restingOffset?: number }) => void
 	setActiveSnapPointValue: (value: DrawerSnapPoint | null) => void
 	animateToSnapPoint: (index: number, options?: { updateActiveSnapPoint?: boolean }) => void
+	waitForSettle: (content: HTMLElement) => void
+	cancelSettle: () => boolean
 	handleAfterOpen: () => void
-	handleAfterClose: () => void
+	handleSurfaceLeave: (element: HTMLElement, afterClose?: () => void) => void
 	handleDismissAttempt: (event: Event) => void
 	handleContentError: (error: unknown, instance: unknown, info: string) => void
 	setGestureClosing: (value: boolean) => void
 	setSkipCloseAnimation: (value: boolean) => void
 	setNestedChildOpen: (value: boolean, options?: { instant?: boolean }) => void
 	setNestedModalChildOpen: (value: boolean) => void
-	onNestedDrag: (closeProgress: number) => void
+	onNestedDrag: (closeProgress: number, startProgress?: number) => void
 	onNestedRelease: (isStillOpen: boolean) => void
 	resetInteractiveState: () => void
 	getContentTransition: (options?: { instant?: boolean, close?: boolean }) => string

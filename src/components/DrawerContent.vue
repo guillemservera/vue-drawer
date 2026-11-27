@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onErrorCaptured, ref, useAttrs, watch } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
+import type { ComponentPublicInstance, HTMLAttributes } from 'vue'
 import { useDrawerAriaIsolation } from '../composables/useDrawerAriaIsolation'
 import { useDrawerDismissableLayer } from '../composables/useDrawerDismissableLayer'
 import { useDrawerFocusScope } from '../composables/useDrawerFocusScope'
 import { useDrawerGesture } from '../composables/useDrawerGesture'
+import { useDrawerPresence } from '../composables/useDrawerPresence'
 import { ESCAPE_LAYER_PRIORITIES, useDrawerEscapeLayer } from '../composables/useDrawerEscapeLayer'
 import { useDrawerRootContext } from '../utils/drawerContext'
 import { provideDrawerGestureContext } from '../utils/drawerGestureContext'
@@ -26,10 +27,6 @@ onErrorCaptured((error, instance, info) => {
 	return false
 })
 
-const shouldRender = computed(() => root.open.value || root.gestureClosing.value)
-const shouldUseInstantLeave = computed(() => root.skipCloseAnimation.value)
-const closeAnimation = computed(() => root.closeAnimationOverride.value ?? root.closeAnimation.value)
-const contentAnimation = computed(() => root.open.value ? root.animation.value : closeAnimation.value)
 const isModalOpen = computed(() => root.open.value && root.modal.value)
 const shouldRestoreFocus = computed(() => !root.preventCloseAutoFocusOnce.value)
 const resolvedContentId = computed(() => getAttributeString(attrs.id) ?? root.defaultContentId)
@@ -45,15 +42,6 @@ const hasAccessibleName = computed(() => {
 	const ariaLabelledBy = resolvedAriaLabelledBy.value?.trim()
 	return Boolean(ariaLabel || ariaLabelledBy)
 })
-const leaveActiveClass = computed(() => {
-	const classes = ['drawer-content-leave-active', `drawer-content-leave-active--${closeAnimation.value}`]
-	if (shouldUseInstantLeave.value) {
-		classes.push('drawer-content-leave-active--instant')
-	}
-	return classes.join(' ')
-})
-const leaveToClass = computed(() => `drawer-content-leave-to drawer-content-leave-to--${closeAnimation.value}`)
-
 function getAttributeString(value: unknown) {
 	if (value === undefined || value === null || value === false) return undefined
 	return String(value)
@@ -76,6 +64,7 @@ const {
 	handlePointerUp,
 	handlePointerCancel,
 	handleLostPointerCapture,
+	releaseOpenMotion,
 } = useDrawerGesture({
 	open: root.open,
 	openedAt: root.openedAt,
@@ -105,15 +94,23 @@ const {
 	getRestingOffset: root.getRestingOffset,
 	getRestingOverlayOpacity: root.getRestingOverlayOpacity,
 	animateToSnapPoint: root.animateToSnapPoint,
+	waitForSettle: root.waitForSettle,
+	cancelSettle: root.cancelSettle,
 	resetInteractiveState: root.resetInteractiveState,
-	onNestedDrag: (closeProgress) => {
-		if (root.scalesParent.value) root.parentContext?.onNestedDrag(closeProgress)
+	onNestedDrag: (closeProgress, startProgress) => {
+		if (root.scalesParent.value) root.parentContext?.onNestedDrag(closeProgress, startProgress)
 	},
 	onNestedRelease: (isStillOpen) => {
 		if (root.scalesParent.value) root.parentContext?.onNestedRelease(isStillOpen)
 	},
 })
 const contentRef = ref<HTMLElement | null>(null)
+const { present, motionClasses, closeAnimation, fadeLeaveTransform } = useDrawerPresence(root, contentRef, 'content', {
+	afterOpen: handleAfterEnter,
+	afterClose: handleAfterLeave,
+	beforeLeave: releaseOpenMotion,
+})
+const contentAnimation = computed(() => root.open.value ? root.animation.value : closeAnimation.value)
 
 // While a modal nested drawer is open its own trap owns focus. Its content is portalled outside this one, so this
 // trap would otherwise pull every focus inside the child back here (a native select there lost focus as it opened).
@@ -204,7 +201,6 @@ function handleAfterLeave() {
 	if (root.open.value) return
 	focusScope.handleAfterClose()
 	root.preventCloseAutoFocusOnce.value = false
-	root.handleAfterClose()
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -293,49 +289,39 @@ function handleTrackedLostPointerCapture(event: PointerEvent) {
 </script>
 
 <template>
-	<Transition
-		:appear="root.shouldAnimateInitialOpen.value"
-		enter-active-class="drawer-content-enter-active"
-		enter-from-class="drawer-content-enter-from"
-		enter-to-class="drawer-content-enter-to"
-		:leave-active-class="leaveActiveClass"
-		leave-from-class="drawer-content-leave-from"
-		:leave-to-class="leaveToClass"
-		@after-enter="handleAfterEnter"
-		@after-leave="handleAfterLeave"
+	<div
+		v-if="present"
+		:ref="assignContentRef"
+		v-bind="attrs"
+		:id="resolvedContentId"
+		role="dialog"
+		:aria-modal="root.modal.value ? 'true' : undefined"
+		:aria-labelledby="resolvedAriaLabelledBy"
+		:aria-describedby="resolvedAriaDescribedBy"
+		:inert="root.open.value ? (attrs.inert as HTMLAttributes['inert']) : true"
+		tabindex="-1"
+		data-drawer-content=""
+		:data-snap-points="root.hasSnapPoints.value ? 'true' : 'false'"
+		:data-active-snap-point-index="root.hasSnapPoints.value ? String(root.activeSnapPointIndex.value) : undefined"
+		:data-modal="root.modal.value ? 'true' : 'false'"
+		:data-state="root.open.value ? 'open' : 'closed'"
+		:data-direction="root.direction.value"
+		:data-animation="contentAnimation"
+		:data-open-animation="root.animation.value"
+		:data-close-animation="closeAnimation"
+		:data-dragging="root.isDragging.value ? 'true' : 'false'"
+		class="drawer-content"
+		:style="{ '--drawer-fade-leave-transform': fadeLeaveTransform }"
+		:class="[motionClasses, { 'drawer-content--dragging': root.isDragging.value, 'drawer-content--nested-parent': root.nestedChildOpen.value }]"
+		@pointerdown="handleTrackedPointerDown"
+		@pointermove="handleTrackedPointerMove"
+		@pointerup="handleTrackedPointerUp"
+		@pointerout="handlePointerOut"
+		@pointercancel="handleTrackedPointerCancel"
+		@lostpointercapture="handleTrackedLostPointerCapture"
+		@contextmenu="handleContextMenu"
+		@keydown="handleKeyDown"
 	>
-		<div
-			v-if="shouldRender"
-			:ref="assignContentRef"
-			v-bind="attrs"
-			:id="resolvedContentId"
-			role="dialog"
-			:aria-modal="root.modal.value ? 'true' : undefined"
-			:aria-labelledby="resolvedAriaLabelledBy"
-			:aria-describedby="resolvedAriaDescribedBy"
-			tabindex="-1"
-			data-drawer-content=""
-			:data-snap-points="root.hasSnapPoints.value ? 'true' : 'false'"
-			:data-active-snap-point-index="root.hasSnapPoints.value ? String(root.activeSnapPointIndex.value) : undefined"
-			:data-modal="root.modal.value ? 'true' : 'false'"
-			:data-state="root.open.value ? 'open' : 'closed'"
-			:data-direction="root.direction.value"
-			:data-animation="contentAnimation"
-			:data-open-animation="root.animation.value"
-			:data-close-animation="closeAnimation"
-			:data-dragging="root.isDragging.value ? 'true' : 'false'"
-			class="drawer-content"
-			:class="{ 'drawer-content--dragging': root.isDragging.value, 'drawer-content--nested-parent': root.nestedChildOpen.value }"
-			@pointerdown="handleTrackedPointerDown"
-			@pointermove="handleTrackedPointerMove"
-			@pointerup="handleTrackedPointerUp"
-			@pointerout="handlePointerOut"
-			@pointercancel="handleTrackedPointerCancel"
-			@lostpointercapture="handleTrackedLostPointerCapture"
-			@contextmenu="handleContextMenu"
-			@keydown="handleKeyDown"
-		>
-			<slot />
-		</div>
-	</Transition>
+		<slot />
+	</div>
 </template>

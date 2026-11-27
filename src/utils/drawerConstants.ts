@@ -64,12 +64,15 @@ export function getTranslateStyles(direction: DrawerDirection, distance: number)
 	}
 }
 
+export function getNestedParentScale() {
+	const viewportWidth = typeof window !== 'undefined' ? Math.max(window.innerWidth, 1) : 375
+	return Math.max((viewportWidth - DRAWER_NESTED_PARENT_DISPLACEMENT) / viewportWidth, 0.94)
+}
+
 export function getNestedParentTransform(direction: DrawerDirection, closeProgress = 0) {
 	const clampedCloseProgress = Math.min(Math.max(closeProgress, 0), 1)
 	const openProgress = 1 - clampedCloseProgress
-	const viewportWidth = typeof window !== 'undefined' ? Math.max(window.innerWidth, 1) : 375
-	const openScale = Math.max((viewportWidth - DRAWER_NESTED_PARENT_DISPLACEMENT) / viewportWidth, 0.94)
-	const scale = 1 - ((1 - openScale) * openProgress)
+	const scale = 1 - ((1 - getNestedParentScale()) * openProgress)
 	const displacement = DRAWER_NESTED_PARENT_DISPLACEMENT * openProgress
 
 	if (direction === 'left') {

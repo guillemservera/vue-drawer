@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import {
 	DRAWER_DEFAULT_CLOSE_THRESHOLD,
 	DRAWER_DEFAULT_CLOSE_TRANSITION_DURATION_MS,
@@ -8,11 +8,12 @@ import {
 	DRAWER_DEFAULT_SCROLL_LOCK_TIMEOUT,
 	DRAWER_DEFAULT_TRANSITION_DURATION_MS,
 	DRAWER_EASE,
+	getNestedParentScale,
 	getNestedParentTransform,
 	getTranslateStyles,
 } from '../utils/drawerConstants'
 import { provideDrawerRootContext, useOptionalDrawerRootContext } from '../utils/drawerContext'
-import { restoreBodyPointerEvents, scheduleBodyPointerEventsRestore, waitForDrawerTransition } from '../utils/drawerDom'
+import { getDrawerTransform, restoreBodyPointerEvents, scheduleBodyPointerEventsRestore, waitForDrawerTransition } from '../utils/drawerDom'
 import { getActiveSnapPointIndex, getOverlayOpacityForOffset, getSnapPointOffsets } from '../utils/drawerSnapPoints'
 import type { DrawerAnimation, DrawerRootEmits, DrawerRootProps, DrawerSnapPoint } from '../utils/drawerTypes'
 import { useDrawerInputReposition } from '../composables/useDrawerInputReposition'
@@ -68,6 +69,8 @@ const overlayElement = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const gestureClosing = ref(false)
 const scrollLockOpen = ref(props.open ?? props.defaultOpen)
+const closeCommitted = ref(false)
+const finishedLeaves = new Map<HTMLElement, (() => void) | undefined>()
 const shouldAnimateInitialOpen = ref(!props.defaultOpen)
 const skipCloseAnimation = ref(false)
 const closeAnimationOverride = ref<DrawerAnimation | null>(null)
@@ -85,6 +88,8 @@ const titleId = ref<string | undefined>()
 const descriptionId = ref<string | undefined>()
 let skipNextActiveSnapPointAnimation = false
 let nestedParentTransitionCleanup: (() => void) | null = null
+let settleCleanup: (() => void) | undefined
+let nestedDragStart: { childProgress: number, parentProgress: number } | undefined
 
 interface SyncRestingStyleOptions {
 	overlayOpacity?: number
@@ -94,8 +99,7 @@ interface SyncRestingStyleOptions {
 const open = computed({
 	get: () => props.open ?? uncontrolledOpen.value,
 	set: (value: boolean) => {
-		// Auto-detect instant close before updating the value so Vue's
-		// <Transition> picks up skipCloseAnimation in the same render cycle
+		// Resolve instant close before the leave styles are applied.
 		if (!value) {
 			maybeEnableSkipCloseAnimation()
 		}
@@ -216,10 +220,6 @@ function emitRelease(pointerEvent: PointerEvent, isOpen: boolean) {
 function requestOpenChange(value: boolean, options: { animation?: DrawerAnimation } = {}) {
 	if (!value) {
 		closeAnimationOverride.value = options.animation ?? null
-		// Auto-detect instant close: if the consumer set a very short transition
-		// duration via --drawer-duration-ms, skip the close animation so Vue's
-		// <Transition> uses the --instant class (1ms) which guarantees
-		// transitionend fires without a visible animation frame.
 		maybeEnableSkipCloseAnimation()
 	}
 
@@ -314,7 +314,10 @@ function syncRestingStyles(options: SyncRestingStyleOptions = {}) {
 
 function registerContentElement(element: HTMLElement | null) {
 	contentElement.value = element
-	if (!element) return
+	if (!element) {
+		if (!open.value) scrollLockOpen.value = false
+		return
+	}
 
 	switch (props.direction) {
 		case 'bottom':
@@ -413,6 +416,7 @@ function cancelNestedParentTransition() {
 
 function clearNestedParentTransform() {
 	cancelNestedParentTransition()
+	nestedDragStart = undefined
 	nestedChildOpen.value = false
 
 	const content = contentElement.value
@@ -433,6 +437,7 @@ function applyNestedParentTransformIfNeeded(options: { instant?: boolean } = {})
 function setNestedChildOpen(value: boolean, options: { instant?: boolean } = {}) {
 	if (nestedChildOpen.value === value) return
 	nestedChildOpen.value = value
+	nestedDragStart = undefined
 
 	const content = contentElement.value
 	if (!content) return
@@ -469,13 +474,27 @@ function setNestedModalChildOpen(value: boolean) {
 	nestedModalChildOpen.value = value
 }
 
-function onNestedDrag(closeProgress: number) {
+function onNestedDrag(closeProgress: number, startProgress?: number) {
 	const content = contentElement.value
 	if (!content || !open.value) return
 
 	cancelNestedParentTransition()
+	if (startProgress !== undefined) {
+		// The parent's own timing may put it at a different progress than the child.
+		const restingScale = getNestedParentScale()
+		const renderedScale = getDrawerTransform(content)?.a ?? 1
+		const parentProgress = clamp((renderedScale - restingScale) / (1 - restingScale), 0, 1)
+		nestedDragStart = { childProgress: startProgress, parentProgress }
+	}
+	let parentProgress = closeProgress
+	if (nestedDragStart && closeProgress > 0 && closeProgress < 1) {
+		const { childProgress, parentProgress: start } = nestedDragStart
+		parentProgress = closeProgress <= childProgress
+			? start * (closeProgress / childProgress)
+			: start + (1 - start) * ((closeProgress - childProgress) / (1 - childProgress))
+	}
 	content.style.transition = 'none'
-	content.style.transform = getNestedCompositeTransform(closeProgress)
+	content.style.transform = getNestedCompositeTransform(parentProgress)
 }
 
 function onNestedRelease(isStillOpen: boolean) {
@@ -483,6 +502,7 @@ function onNestedRelease(isStillOpen: boolean) {
 	if (!content) return
 
 	cancelNestedParentTransition()
+	nestedDragStart = undefined
 
 	if (!isStillOpen) {
 		nestedChildOpen.value = false
@@ -539,10 +559,22 @@ function animateToSnapPoint(index: number, options: { updateActiveSnapPoint?: bo
 		overlay.style.opacity = `${targetOverlayOpacity}`
 	}
 
-	waitForDrawerTransition(content, 'transform', () => {
-		if (!open.value) return
-		resetInteractiveState()
+	waitForSettle(content)
+}
+
+function waitForSettle(content: HTMLElement) {
+	cancelSettle()
+	settleCleanup = waitForDrawerTransition(content, 'transform', () => {
+		settleCleanup = undefined
+		if (open.value) resetInteractiveState()
 	})
+}
+
+function cancelSettle() {
+	if (!settleCleanup) return false
+	settleCleanup()
+	settleCleanup = undefined
+	return true
 }
 
 function handleDismissAttempt(event: Event) {
@@ -558,6 +590,7 @@ function handleContentError(error: unknown, instance: unknown, info: string) {
 }
 
 function resetInteractiveState() {
+	cancelSettle()
 	const content = contentElement.value
 	const overlay = overlayElement.value
 
@@ -615,6 +648,27 @@ function handleAfterOpen() {
 	emit('animation-end', true)
 }
 
+function handleSurfaceLeave(element: HTMLElement, afterClose?: () => void) {
+	finishedLeaves.set(element, afterClose)
+	commitCloseIfReady()
+}
+
+function commitCloseIfReady() {
+	if (open.value || closeCommitted.value || !finishedLeaves.size) return
+	const content = contentElement.value
+	const overlay = overlayElement.value
+	if ((content && !finishedLeaves.has(content)) || (overlay && !finishedLeaves.has(overlay))) return
+
+	const afterClose = content ? finishedLeaves.get(content) : undefined
+	finishedLeaves.clear()
+	closeCommitted.value = true
+	void nextTick(() => {
+		if (open.value || !closeCommitted.value) return
+		afterClose?.()
+		handleAfterClose()
+	})
+}
+
 function handleAfterClose() {
 	if (open.value) return
 	resetInteractiveState()
@@ -670,6 +724,7 @@ provideDrawerRootContext({
 	nestedModalChildOpen,
 	scalesParent,
 	gestureClosing,
+	closeCommitted,
 	skipCloseAnimation,
 	shouldAnimateInitialOpen,
 	preventCloseAutoFocusOnce,
@@ -693,8 +748,10 @@ provideDrawerRootContext({
 	syncRestingStyles,
 	setActiveSnapPointValue,
 	animateToSnapPoint,
+	waitForSettle,
+	cancelSettle,
 	handleAfterOpen,
-	handleAfterClose,
+	handleSurfaceLeave,
 	handleDismissAttempt,
 	handleContentError,
 	setGestureClosing,
@@ -751,8 +808,7 @@ watch(open, (value, previousValue) => {
 		scrollLockOpen.value = true
 	}
 	else if (previousValue === true && (contentElement.value || gestureClosing.value)) {
-		// Keep document scroll locked until Vue's leave transition has fully removed
-		// the drawer from view. This mirrors Vaul/Radix presence behavior on desktop.
+		// Keep document scroll locked until the drawer finishes leaving.
 		scrollLockOpen.value = true
 	}
 	else {
@@ -763,6 +819,8 @@ watch(open, (value, previousValue) => {
 		emit('close')
 	}
 }, { flush: 'sync', immediate: true })
+
+watch([contentElement, overlayElement], commitCloseIfReady, { flush: 'post' })
 
 watch(activeSnapPoint, (value, previousValue) => {
 	if (value === previousValue) return
@@ -849,6 +907,10 @@ onMounted(() => {
 
 watch(open, (isOpen) => {
 	if (isOpen) {
+		// Presence also observes batched open changes, so same-tick toggles keep the current leave.
+		closeCommitted.value = false
+		finishedLeaves.clear()
+
 		if (scalesParent.value) {
 			parentContext?.setNestedChildOpen(true)
 		}
@@ -868,11 +930,11 @@ watch(open, (isOpen) => {
 		return
 	}
 
+	maybeEnableSkipCloseAnimation()
+
 	if (nestedChildOpen.value) {
 		clearNestedParentTransform()
 	}
-
-	maybeEnableSkipCloseAnimation()
 
 	if (props.nested) {
 		parentContext?.setNestedChildOpen(false)

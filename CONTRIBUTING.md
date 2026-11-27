@@ -19,6 +19,8 @@ pnpm run ci
 
 The CI command runs type checking, tests, the production build, package linting and a dry package check.
 
+Run `pnpm test:browser` to check motion and pointer handoff in headless Chrome. Set `CHROME_PATH` if Chrome or Chromium is available under a different executable name.
+
 ## Pull requests
 
 - Keep changes focused and explain the user-visible behavior.

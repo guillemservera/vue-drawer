@@ -11,6 +11,7 @@ const gestureHandlers = vi.hoisted(() => ({
 	handlePointerUp: vi.fn(),
 	handlePointerCancel: vi.fn(),
 	handleLostPointerCapture: vi.fn(),
+	releaseOpenMotion: vi.fn(),
 }))
 
 const rootContext = vi.hoisted(() => {
@@ -48,6 +49,7 @@ const rootContext = vi.hoisted(() => {
 		nestedModalChildOpen: box(false),
 		scalesParent: box(false),
 		gestureClosing: box(false),
+		closeCommitted: box(false),
 			preventCloseAutoFocusOnce: box(false),
 			requestOpenChange: vi.fn(),
 			registerContentId: vi.fn(),
@@ -68,6 +70,8 @@ const rootContext = vi.hoisted(() => {
 		getRestingOffset: vi.fn(() => 0),
 		getRestingOverlayOpacity: vi.fn(() => 1),
 		animateToSnapPoint: vi.fn(),
+		waitForSettle: vi.fn(),
+		cancelSettle: vi.fn(),
 		parentContext: null,
 		onNestedDrag: vi.fn(),
 		onNestedRelease: vi.fn(),
@@ -79,7 +83,7 @@ const rootContext = vi.hoisted(() => {
 		skipCloseAnimation: box(false),
 		shouldAnimateInitialOpen: box(true),
 		handleAfterOpen: vi.fn(),
-		handleAfterClose: vi.fn(),
+		handleSurfaceLeave: vi.fn(),
 		handleDismissAttempt: vi.fn(),
 		handleContentError: vi.fn(),
 	}
@@ -123,12 +127,24 @@ describe('DrawerContent', () => {
 		})
 	}
 
-	it('passes the root initial animation flag to the transition appear prop', () => {
+	it('renders initially open content at rest when initial animation is disabled', async () => {
 		rootContext.shouldAnimateInitialOpen.value = false
-		const wrapper = mount(DrawerContent)
+		rootContext.handleAfterOpen.mockClear()
+		const wrapper = mountDrawerContent()
+		await wrapper.vm.$nextTick()
 
-		expect(wrapper.get('transition-stub').attributes('appear')).toBe('false')
+		const content = wrapper.get('[data-drawer-content]')
+		expect(content.attributes('data-state')).toBe('open')
+		expect(content.classes()).not.toContain('drawer-content-enter-active')
+		expect(rootContext.handleAfterOpen).not.toHaveBeenCalled()
 
+		wrapper.unmount()
+	})
+
+	it('preserves an inert attribute supplied by the consumer while open', () => {
+		const wrapper = mount(DrawerContent, { attrs: { inert: '' } })
+
+		expect(wrapper.get('[data-drawer-content]').attributes('inert')).toBe('')
 		wrapper.unmount()
 	})
 

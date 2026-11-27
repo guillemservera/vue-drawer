@@ -32,3 +32,14 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ci
+      - name: Install Chrome
+        if: matrix.node-version == 24
+        run: |
+          if ! command -v google-chrome; then
+            curl --fail --silent --show-error --location \
+              https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+              --output "$RUNNER_TEMP/google-chrome.deb"
+            sudo apt-get install -y "$RUNNER_TEMP/google-chrome.deb"
+          fi
+      - run: pnpm run test:browser
+        if: matrix.node-version == 24

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, useAttrs } from 'vue'
+import { ref, useAttrs } from 'vue'
+import { useDrawerPresence } from '../composables/useDrawerPresence'
 import { useDrawerRootContext } from '../utils/drawerContext'
 import { isOutsidePressOwnedByNestedLayer } from '../utils/drawerDom'
 import { suppressNextClickAfterPointerDismiss } from '../utils/drawerPointer'
@@ -11,27 +12,17 @@ defineOptions({
 const attrs = useAttrs()
 const root = useDrawerRootContext()
 
-const shouldShow = computed(() => root.open.value || root.gestureClosing.value)
-const shouldUseInstantLeave = computed(() => root.skipCloseAnimation.value)
-const closeAnimation = computed(() => root.closeAnimationOverride.value ?? root.closeAnimation.value)
-const leaveActiveClass = computed(() => {
-	const classes = ['drawer-overlay-leave-active', `drawer-overlay-leave-active--${closeAnimation.value}`]
-	if (shouldUseInstantLeave.value) {
-		classes.push('drawer-overlay-leave-active--instant')
-	}
-	return classes.join(' ')
-})
+const overlayRef = ref<HTMLElement | null>(null)
+const { present, motionClasses, closeAnimation } = useDrawerPresence(root, overlayRef, 'overlay')
 
 function assignOverlayRef(el: unknown) {
-	if (!el) {
-		root.registerOverlayElement(null)
-		return
-	}
-	root.registerOverlayElement(el instanceof HTMLElement ? el : null)
+	const element = el instanceof HTMLElement ? el : null
+	overlayRef.value = element
+	root.registerOverlayElement(element)
 }
 
 function handleOverlayPointerDown(event: PointerEvent) {
-	if (event.target !== event.currentTarget) return
+	if (!root.open.value || event.target !== event.currentTarget) return
 	if (isOutsidePressOwnedByNestedLayer()) return
 	root.handleDismissAttempt(event)
 	if (event.defaultPrevented || !root.modal.value || !root.dismissible.value) return
@@ -43,28 +34,19 @@ function handleOverlayPointerDown(event: PointerEvent) {
 </script>
 
 <template>
-	<Transition
-		:appear="root.shouldAnimateInitialOpen.value"
-		enter-active-class="drawer-overlay-enter-active"
-		enter-from-class="drawer-overlay-enter-from"
-		enter-to-class="drawer-overlay-enter-to"
-		:leave-active-class="leaveActiveClass"
-		leave-from-class="drawer-overlay-leave-from"
-		leave-to-class="drawer-overlay-leave-to"
-	>
-		<div
-			v-if="shouldShow"
-			:ref="assignOverlayRef"
-			v-bind="attrs"
-			data-drawer-overlay=""
-			:data-modal="root.modal.value ? 'true' : 'false'"
-			:data-snap-points="root.open.value && root.hasSnapPoints.value ? 'true' : 'false'"
-			:data-snap-points-overlay="root.open.value && root.hasSnapPoints.value && root.shouldFadeOverlay.value ? 'true' : 'false'"
-			:data-state="root.open.value ? 'open' : 'closed'"
-			:data-close-animation="closeAnimation"
-			:data-dragging="root.isDragging.value ? 'true' : 'false'"
-			:class="['drawer-overlay', { 'drawer-overlay--non-modal': !root.modal.value, 'drawer-overlay--dragging': root.isDragging.value }]"
-			@pointerdown="handleOverlayPointerDown"
-		/>
-	</Transition>
+	<div
+		v-if="present"
+		:ref="assignOverlayRef"
+		v-bind="attrs"
+		data-drawer-overlay=""
+		:data-modal="root.modal.value ? 'true' : 'false'"
+		:data-snap-points="root.open.value && root.hasSnapPoints.value ? 'true' : 'false'"
+		:data-snap-points-overlay="root.open.value && root.hasSnapPoints.value && root.shouldFadeOverlay.value ? 'true' : 'false'"
+		:data-state="root.open.value ? 'open' : 'closed'"
+		:data-close-animation="closeAnimation"
+		:data-dragging="root.isDragging.value ? 'true' : 'false'"
+		class="drawer-overlay"
+		:class="[motionClasses, { 'drawer-overlay--non-modal': !root.modal.value, 'drawer-overlay--dragging': root.isDragging.value }]"
+		@pointerdown="handleOverlayPointerDown"
+	/>
 </template>

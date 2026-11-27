@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, watch } from 'vue'
 import type { DrawerHandleProps } from '../utils/drawerTypes'
 import { useOptionalDrawerRootContext } from '../utils/drawerContext'
 import { useOptionalDrawerGestureContext } from '../utils/drawerGestureContext'
@@ -110,7 +110,7 @@ function handleClick() {
 }
 
 function cycleSnapPoints() {
-	if (!root || props.preventCycle || root.isDragging.value || shouldCancelInteraction) {
+	if (!root?.open.value || props.preventCycle || root.isDragging.value || shouldCancelInteraction) {
 		cancelHandleInteraction()
 		return
 	}
@@ -133,9 +133,11 @@ function cycleSnapPoints() {
 	root.animateToSnapPoint(activeIndex + 1)
 }
 
-onBeforeUnmount(() => {
-	cancelHandleInteraction()
-})
+watch(() => root?.open.value, (open) => {
+	if (!open) cancelHandleInteraction()
+}, { flush: 'sync' })
+
+onBeforeUnmount(cancelHandleInteraction)
 </script>
 
 <template>

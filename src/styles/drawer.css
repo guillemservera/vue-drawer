@@ -38,8 +38,6 @@
    the browser while they run. */
 .drawer-content-enter-active,
 .drawer-content-leave-active,
-.drawer-content-leave-active--slide,
-.drawer-content-leave-active--fade,
 .drawer-content--dragging,
 .drawer-content--nested-parent {
 	will-change: transform;
@@ -143,62 +141,50 @@
 }
 
 .drawer-content-enter-active {
-	transition: transform var(--drawer-duration, 500ms) var(--drawer-ease);
+	transition:
+		transform var(--drawer-duration, 500ms) var(--drawer-ease),
+		opacity var(--drawer-duration, 500ms) var(--drawer-ease);
 }
 
-.drawer-content-leave-active {
-	transition: transform var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
+.drawer-content[data-close-animation='slide'].drawer-content-leave-active {
+	transition:
+		transform var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease)),
+		opacity var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
 }
 
-.drawer-content-leave-active--slide {
-	transition: transform var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
-}
-
-.drawer-content-leave-active--instant {
-	transition-duration: 1ms;
-}
-
-.drawer-content-enter-to,
-.drawer-content-leave-from {
+.drawer-content-enter-to {
 	transform: translate3d(0, var(--drawer-rest-offset, 0px), 0);
 }
 
 .drawer-content[data-direction='bottom'][data-animation='slide'].drawer-content-enter-from,
-.drawer-content[data-direction='bottom'][data-close-animation='slide'].drawer-content-leave-to,
-.drawer-content[data-direction='bottom'].drawer-content-leave-to--slide {
+.drawer-content[data-direction='bottom'][data-close-animation='slide'].drawer-content-leave-to {
 	transform: translate3d(0, calc(100% + env(safe-area-inset-bottom) + var(--drawer-offscreen-offset, 24px)), 0);
 }
 
 .drawer-content[data-direction='top'][data-animation='slide'].drawer-content-enter-from,
-.drawer-content[data-direction='top'][data-close-animation='slide'].drawer-content-leave-to,
-.drawer-content[data-direction='top'].drawer-content-leave-to--slide {
+.drawer-content[data-direction='top'][data-close-animation='slide'].drawer-content-leave-to {
 	transform: translate3d(0, calc(-100% - env(safe-area-inset-top) - var(--drawer-offscreen-offset, 24px)), 0);
 }
 
-.drawer-content[data-direction='top'].drawer-content-enter-to,
-.drawer-content[data-direction='top'].drawer-content-leave-from {
+.drawer-content[data-direction='top'].drawer-content-enter-to {
 	transform: translate3d(0, calc(var(--drawer-rest-offset, 0px) * -1), 0);
 }
 
 .drawer-content[data-direction='left'][data-animation='slide'].drawer-content-enter-from,
-.drawer-content[data-direction='left'][data-close-animation='slide'].drawer-content-leave-to,
-.drawer-content[data-direction='left'].drawer-content-leave-to--slide {
+.drawer-content[data-direction='left'][data-close-animation='slide'].drawer-content-leave-to {
 	transform: translate3d(calc(-100% - env(safe-area-inset-left) - var(--drawer-offscreen-offset, 24px)), 0, 0);
 }
 
-.drawer-content[data-direction='left'].drawer-content-enter-to,
-.drawer-content[data-direction='left'].drawer-content-leave-from {
+.drawer-content[data-direction='left'].drawer-content-enter-to {
 	transform: translate3d(calc(var(--drawer-rest-offset, 0px) * -1), 0, 0);
 }
 
 .drawer-content[data-direction='right'][data-animation='slide'].drawer-content-enter-from,
-.drawer-content[data-direction='right'][data-close-animation='slide'].drawer-content-leave-to,
-.drawer-content[data-direction='right'].drawer-content-leave-to--slide {
+.drawer-content[data-direction='right'][data-close-animation='slide'].drawer-content-leave-to {
 	transform: translate3d(calc(100% + env(safe-area-inset-right) + var(--drawer-offscreen-offset, 24px)), 0, 0);
 }
 
-.drawer-content[data-direction='right'].drawer-content-enter-to,
-.drawer-content[data-direction='right'].drawer-content-leave-from {
+.drawer-content[data-direction='right'].drawer-content-enter-to {
 	transform: translate3d(var(--drawer-rest-offset, 0px), 0, 0);
 }
 
@@ -208,12 +194,11 @@
 		transform var(--drawer-fade-enter-duration, 260ms) var(--drawer-fade-ease);
 }
 
-.drawer-content[data-close-animation='fade'].drawer-content-leave-active,
-.drawer-content-leave-active--fade {
+.drawer-content[data-close-animation='fade'].drawer-content-leave-active {
 	transition: opacity var(--drawer-fade-leave-duration, 180ms) var(--drawer-fade-ease);
 }
 
-.drawer-content[data-close-animation='fade'].drawer-content-leave-active--instant {
+.drawer-content[data-close-animation].drawer-content-leave-active--instant {
 	transition-duration: 1ms;
 }
 
@@ -234,38 +219,28 @@
 	transform: translate3d(var(--drawer-rest-offset, 0px), var(--drawer-fade-enter-offset, 0px), 0);
 }
 
-.drawer-content[data-animation='fade'].drawer-content-enter-to,
-.drawer-content[data-close-animation='fade'].drawer-content-leave-from {
+.drawer-content[data-animation='fade'].drawer-content-enter-to {
 	opacity: 1;
 }
 
-.drawer-content[data-close-animation='fade'].drawer-content-leave-to,
-.drawer-content-leave-to--fade {
+.drawer-content[data-close-animation='fade'].drawer-content-leave-to {
 	opacity: 0;
 }
 
-.drawer-content[data-animation='fade'].drawer-content-enter-to,
-.drawer-content[data-close-animation='fade'].drawer-content-leave-to,
-.drawer-content-leave-to--fade {
-	transform: translate3d(0, var(--drawer-rest-offset, 0px), 0);
+.drawer-content[data-close-animation='fade'].drawer-content-leave-to {
+	transform: var(--drawer-fade-leave-transform, translate3d(0, var(--drawer-rest-offset, 0px), 0));
 }
 
-.drawer-content[data-direction='top'][data-animation='fade'].drawer-content-enter-to,
-.drawer-content[data-direction='top'][data-close-animation='fade'].drawer-content-leave-to,
-.drawer-content[data-direction='top'].drawer-content-leave-to--fade {
-	transform: translate3d(0, calc(var(--drawer-rest-offset, 0px) * -1), 0);
+.drawer-content[data-direction='top'][data-close-animation='fade'].drawer-content-leave-to {
+	transform: var(--drawer-fade-leave-transform, translate3d(0, calc(var(--drawer-rest-offset, 0px) * -1), 0));
 }
 
-.drawer-content[data-direction='left'][data-animation='fade'].drawer-content-enter-to,
-.drawer-content[data-direction='left'][data-close-animation='fade'].drawer-content-leave-to,
-.drawer-content[data-direction='left'].drawer-content-leave-to--fade {
-	transform: translate3d(calc(var(--drawer-rest-offset, 0px) * -1), 0, 0);
+.drawer-content[data-direction='left'][data-close-animation='fade'].drawer-content-leave-to {
+	transform: var(--drawer-fade-leave-transform, translate3d(calc(var(--drawer-rest-offset, 0px) * -1), 0, 0));
 }
 
-.drawer-content[data-direction='right'][data-animation='fade'].drawer-content-enter-to,
-.drawer-content[data-direction='right'][data-close-animation='fade'].drawer-content-leave-to,
-.drawer-content[data-direction='right'].drawer-content-leave-to--fade {
-	transform: translate3d(var(--drawer-rest-offset, 0px), 0, 0);
+.drawer-content[data-direction='right'][data-close-animation='fade'].drawer-content-leave-to {
+	transform: var(--drawer-fade-leave-transform, translate3d(var(--drawer-rest-offset, 0px), 0, 0));
 }
 
 .drawer-content--dragging {
@@ -304,7 +279,6 @@
 
 .drawer-overlay-enter-active,
 .drawer-overlay-leave-active,
-.drawer-overlay-leave-active--fade,
 .drawer-overlay--dragging {
 	/* Motion-only, like the content (drag updates opacity inline every move): a
 	   resting composited overlay would promote the content above it
@@ -320,12 +294,11 @@
 	transition: opacity var(--drawer-close-duration, 500ms) var(--drawer-close-ease, var(--drawer-ease));
 }
 
-.drawer-overlay[data-close-animation='fade'].drawer-overlay-leave-active,
-.drawer-overlay-leave-active--fade {
+.drawer-overlay[data-close-animation='fade'].drawer-overlay-leave-active {
 	transition: opacity var(--drawer-fade-leave-duration, 180ms) var(--drawer-fade-ease);
 }
 
-.drawer-overlay-leave-active--instant {
+.drawer-overlay[data-close-animation].drawer-overlay-leave-active--instant {
 	transition-duration: 1ms;
 }
 
@@ -334,8 +307,7 @@
 	opacity: 0;
 }
 
-.drawer-overlay-enter-to,
-.drawer-overlay-leave-from {
+.drawer-overlay-enter-to {
 	opacity: var(--drawer-rest-overlay-opacity, 1);
 }
 
@@ -366,30 +338,21 @@
  * The DRAG gesture is deliberately untouched even when opted in: tracking the
  * pointer 1:1 is direct manipulation, not automatic motion, and freezing it
  * would break the interaction rather than soften it.
- *
- * `!important` is load-bearing. The offscreen transforms come from a direction
- * matrix of four-part selectors
- * (`.drawer-content[data-direction='x'][data-animation='slide'].drawer-content-enter-from`),
- * which outranks this rule on specificity; restating all twelve here would rot
- * the next time a direction or animation mode is added.
  */
 @media (prefers-reduced-motion: reduce) {
 	.drawer-content[data-reduced-motion='fade'].drawer-content-enter-active,
-	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-active,
-	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-active--slide {
+	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-active {
 		transition-property: opacity;
 	}
 
-	.drawer-content[data-reduced-motion='fade'].drawer-content-enter-from,
-	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-to,
-	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-to--slide {
-		transform: none !important;
+	.drawer-content[data-reduced-motion='fade'][data-direction][data-animation].drawer-content-enter-from,
+	.drawer-content[data-reduced-motion='fade'][data-direction][data-animation].drawer-content-leave-to {
+		transform: none;
 		opacity: 0;
 	}
 
-	.drawer-content[data-reduced-motion='fade'].drawer-content-enter-to,
-	.drawer-content[data-reduced-motion='fade'].drawer-content-leave-from {
-		transform: none !important;
+	.drawer-content[data-reduced-motion='fade'][data-direction][data-animation].drawer-content-enter-to {
+		transform: none;
 		opacity: 1;
 	}
 }

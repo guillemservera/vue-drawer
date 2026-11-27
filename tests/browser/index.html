@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>VueDrawer motion tests</title>
+	<style>
+		.test-content {
+			--drawer-position: fixed;
+			inset: auto 0 0;
+			height: 300px;
+			overflow: auto;
+			background: white;
+		}
+
+		.test-overlay {
+			position: fixed;
+			inset: 0;
+			background: black;
+		}
+
+		.test-right {
+			inset: 0 0 0 auto;
+			width: 300px;
+			height: auto;
+		}
+
+		.test-linear.test-linear {
+			--drawer-ease: linear;
+			--drawer-close-ease: ease-in;
+		}
+	</style>
+</head>
+<body>
+	<script type="module" src="./drawerMotion.ts"></script>
+</body>
+</html>
